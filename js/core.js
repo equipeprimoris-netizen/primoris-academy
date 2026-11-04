@@ -6,10 +6,10 @@ export const S = {
   profile: null, ready: false, fatal: null, membersLoaded: false, started: false,
   members: {}, equipes: {}, cursos: {}, contatos: {}, atividades: {}, reunioes: {},
   vendas: {}, validacoes: {}, tarefas: {}, progresso: {}, feedbacks: {}, notifs: {},
-  solicitacoes: {}, progressoes: {}, audit: {}, pagamentos: {},
+  solicitacoes: {}, progressoes: {}, audit: {}, pagamentos: {}, forum: {}, forum_resp: {},
   config: { geral: null, semanaZero: null, carreira: null, academy: null, comissoes: null, desafios: null, mensagens: null },
   view: 'inicio', sub: {}, dash: { escopo: 'me', periodo: 'mes', equipe: '', consultor: '' },
-  stale: false,
+  stale: false, digitando: {},
 };
 
 // ---------- Parâmetros padrão (o admin altera em Administração > Parâmetros)
@@ -368,4 +368,36 @@ export const resumoSemana = uids => {
   const pendentes = list(S.vendas).filter(v => uids.includes(v.ownerId) && ['registrada', 'pre_aprovada'].includes(vendaStatus(v)));
   const destaque = uids.map(u => ({ u, v: vgv([u], r1), p: prospeccoes([u], r1).length })).sort((a, b) => b.v - a.v || b.p - a.p)[0];
   return { atual: k(r1), anterior: k(r0), parados, semAtividade, pendentes, destaque, r1 };
+};
+
+// ---------- Fórum
+export const CATEGORIAS_FORUM = ['Produto', 'Comercial', 'Sistema', 'Carreira', 'Outros'];
+export const papel = uid => { const m = S.members[uid]; if (!m) return 'Integrante'; const r = ROLES[m.role] || 'Consultor'; return m.role === 'gestor' || m.role === 'consultor' ? r : r; };
+export const respostasDe = tid => list(S.forum_resp).filter(r => r.topicoId === tid && !r.deletedAt).sort((a, b) => (a.at || '').localeCompare(b.at || ''));
+export const statusTopico = t => {
+  if (t.resolvido) return ['Resolvido', 'ok'];
+  const rs = respostasDe(t.id);
+  if (rs.some(r => ['gestor', 'admin', 'superadmin'].includes(S.members[r.ownerId]?.role) && r.ownerId !== t.ownerId)) return ['Respondido pela gestão', 'accent'];
+  return rs.length ? ['Em conversa', ''] : ['Aguardando resposta', 'warn'];
+};
+
+// ---------- Projeção individual (usa só dados reais do consultor)
+export const projecao = uid => {
+  const mm = geral().metaMilhao; const tot = vgvTotal(uid); const falta = Math.max(0, mm - tot);
+  const mens = vgvMensal([uid], 6); const ult3 = mens.slice(-3).reduce((s, x) => s + x.valor, 0) / 3;
+  const mesesMilhao = falta === 0 ? 0 : ult3 > 0 ? Math.ceil(falta / ult3) : null;
+  const ativosC = contatosDe([uid]).filter(c => !['venda', 'perdido', 'sem_interesse'].includes(c.etapa || 'novo'));
+  const pipeline = ETAPAS.filter(e => !['venda', 'perdido', 'sem_interesse'].includes(e.id)).map(e => { const cs = ativosC.filter(c => (c.etapa || 'novo') === e.id); return { ...e, n: cs.length, valor: cs.reduce((s, c) => s + (Number(c.valor) || 0), 0) }; });
+  const quentes = ativosC.filter(c => ['proposta', 'followup', 'reuniao_realizada'].includes(c.etapa)).reduce((s, c) => s + (Number(c.valor) || 0), 0);
+  const t = today(); const ini = t.slice(0, 8) + '01'; const r = { from: ini, to: t };
+  let diasUteis = 0; for (let d = ini; d <= t; d = addDays(d, 1)) { const w = new Date(d + 'T12:00:00Z').getUTCDay(); if (w && w !== 6) diasUteis++; }
+  const m = metasDe(uid);
+  const ritmoMetas = [
+    { nome: 'Prospecções no mês', feito: prospeccoes([uid], r).length, esperado: m.prospeccoes * diasUteis },
+    { nome: 'Contatos novos no mês', feito: contatosDe([uid]).filter(c => inP(dayOf(c.createdAt), r)).length, esperado: m.contatos * diasUteis },
+    { nome: 'Reuniões realizadas no mês', feito: reunioesDe([uid]).filter(x => x.status === 'realizada' && inP(dayOf(x.realizadaAt), r)).length, esperado: m.reunioesReal * diasUteis },
+  ];
+  const pl = prog(uid).plano; const vgvMes = vgv([uid], r);
+  const conv = (() => { const p = prospeccoes([uid]).length, re = reunioesDe([uid]).filter(x => x.status === 'realizada').length, v = vendasValidadas([uid]).length; return { pr: p ? re / p : 0, rv: re ? v / re : 0 }; })();
+  return { tot, mm, falta, ult3, mesesMilhao, pipeline, quentes, ritmoMetas, plano: pl?.status === 'aprovado' ? pl : null, vgvMes, conv, diasUteis };
 };

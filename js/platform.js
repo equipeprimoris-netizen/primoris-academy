@@ -159,4 +159,13 @@ export const ativarPush = async () => {
   return 'ativo';
 };
 
+// ---------- Indicador "digitando…" (Realtime broadcast, sem gravar no banco)
+export const canalDigitando = (topico, aoReceber) => {
+  if (noClaude() || !sb) return { avisar() {}, sair() {} };
+  const ch = sb.channel('forum-' + topico, { config: { broadcast: { self: false } } });
+  ch.on('broadcast', { event: 'digitando' }, ({ payload }) => aoReceber(payload)).subscribe();
+  let ultimo = 0;
+  return { avisar: p => { const t = Date.now(); if (t - ultimo < 1500) return; ultimo = t; ch.send({ type: 'broadcast', event: 'digitando', payload: p }); }, sair: () => sb.removeChannel(ch) };
+};
+
 export const use = async name => (noClaude() ? window.claude.use(name) : session ? { db, user, downloads }[name] || null : null);

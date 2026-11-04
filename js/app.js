@@ -3,6 +3,7 @@ import * as C from './core.js';
 import * as V from './views.js';
 import * as P from './platform.js';
 import * as V2 from './views2.js';
+import * as V3 from './views3.js';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -62,7 +63,7 @@ function screen() {
   if ((m.status || 'ativo') !== 'ativo') return V.bloqueado();
   if (!S.dataReady) return V.loading('Sincronizando seus dados…');
   if (!prog(S.uid).welcomeDone && role() === 'consultor') return V.boasVindas();
-  const views = { resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
+  const views = { forum: V3.forum, resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
   let v = S.view;
   if (['equipe', 'relatorios'].includes(v) && !isGestor()) v = 'inicio';
   if (v === 'admin' && !isAdmin()) v = 'inicio';
@@ -88,6 +89,7 @@ function montarVideo() {
 }
 function afterRender() {
   montarVideo();
+  ligarDigitando();
   const sim = document.getElementById('sim'); if (sim) document.getElementById('sim-out').innerHTML = V.simCalc(Object.fromEntries(new FormData(sim)));
   if (S.focusFilter) { const el = document.querySelector(`[data-filter="${S.focusFilter}"]`); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) { /* */ } } S.focusFilter = null; }
 }
@@ -127,6 +129,8 @@ function startData() {
   const track = (key, ref, fn) => { pending++; let done = false; sub(key, ref, s => { fn(s); if (!done) { done = true; ready(); } }); };
   ['contatos', 'atividades', 'reunioes', 'vendas', 'tarefas'].forEach(c => track('d:' + c, own(c), s => { S[c] = toMap(s); }));
   track('d:validacoes', db.collection('validacoes'), s => { S.validacoes = toMap(s); });
+  track('d:forum', db.collection('forum'), s => { S.forum = toMap(s); });
+  track('d:forum_resp', db.collection('forum_resp'), s => { S.forum_resp = toMap(s); });
   track('d:cursos', db.collection('cursos'), s => { S.cursos = toMap(s); });
   if (mine) track('d:progresso', db.doc('progresso/' + uid), d => { S.progresso = d.exists ? { [uid]: d.data() } : {}; });
   else track('d:progresso', db.collection('progresso'), s => { S.progresso = toMap(s); });
@@ -219,6 +223,15 @@ async function baixar(filename, data, tipo = 'text/csv') {
 
 // ---------- Cliques
 const ACT = {
+  'nova-duvida': () => modal('Nova dúvida', V3.duvidaForm(), { wide: true }),
+  topico: id => { S.sub.topico = id || null; if (S.view !== 'forum') location.hash = 'forum'; else { render(true); window.scrollTo(0, 0); } },
+  ff: v => { S.sub.ff = v; render(true); },
+  'resolver-topico': id => run(() => upd('forum/' + id, { resolvido: nowISO(), resolvidoPor: S.uid }), 'Dúvida marcada como resolvida').then(() => { const t = S.forum[id]; if (t.ownerId !== S.uid) notify(t.ownerId, `${nome(S.uid)} marcou sua dúvida como resolvida: ${t.titulo}`, 'forum'); render(true); }),
+  'reabrir-topico': id => run(() => upd('forum/' + id, { resolvido: null }), 'Dúvida reaberta').then(() => render(true)),
+  'excluir-topico': async id => { if (await confirmar('Excluir dúvida', 'A dúvida e as respostas deixam de aparecer no fórum.', 'Excluir')) run(() => upd('forum/' + id, { deletedAt: nowISO(), deletedBy: S.uid }), 'Dúvida excluída').then(() => { S.sub.topico = null; audit('Tópico do fórum excluído', S.forum[id]?.titulo); render(true); }); },
+  'excluir-resposta': async id => { if (await confirmar('Excluir resposta', 'A resposta deixa de aparecer no fórum.', 'Excluir')) run(() => upd('forum_resp/' + id, { deletedAt: nowISO(), deletedBy: S.uid }), 'Resposta excluída').then(() => render(true)); },
+  'ver-carteira': uid => { S.sub.crm = { modo: 'lista', q: '', etapa: '', origem: '', temp: '', dono: uid }; location.hash = 'carteira'; },
+  'ver-agenda': () => { S.sub.agEquipe = true; location.hash = 'agenda'; },
   ligar: id => { setTimeout(() => ACT.ativ(id), 1200); },
   picker: async () => { try { const [c] = await navigator.contacts.select(['name', 'tel', 'email'], { multiple: false }); if (!c) return; const f = $modal.querySelector('form[data-form="contato"]'); if (c.name?.[0]) f.nome.value = c.name[0]; if (c.tel?.[0]) f.telefone.value = c.tel[0]; if (c.email?.[0]) f.email.value = c.email[0]; } catch (e) { toast('Não foi possível abrir a agenda do celular.', 'warn'); } },
   objecoes: () => modal('Objeções e respostas', V2.objecoesView(), { wide: true }),
@@ -347,7 +360,7 @@ document.addEventListener('input', e => {
 function setFilter(t) {
   const k = t.dataset.filter; const v = t.type === 'checkbox' ? t.checked : t.value;
   if (k.startsWith('crm.')) S.sub.crm[k.slice(4)] = v;
-  else if (['agEquipe', 'tfEquipe', 'comMes'].includes(k)) S.sub[k] = v;
+  else if (['agEquipe', 'tfEquipe', 'comMes', 'fq', 'fcat'].includes(k)) S.sub[k] = v;
   else { S.dash[k] = v; if (k === 'escopo') { S.dash.consultor = ''; if (v !== 'equipe') S.dash.equipe = ''; } }
   render(true);
 }
@@ -361,6 +374,18 @@ document.addEventListener('drop', e => { const col = e.target.closest?.('[data-d
 
 // ---------- Formulários
 const FORM = {
+  async duvida(f) {
+    const ref = await add('forum', { ownerId: S.uid, equipeId: C.equipeDe(S.uid), titulo: f.titulo.trim(), texto: f.texto.trim(), categoria: f.categoria, at: nowISO() });
+    [...new Set([...gestoresDe(S.uid), ...admins()])].forEach(u => notify(u, `Nova dúvida de ${nome(S.uid)} (${C.papel(S.uid)}): ${f.titulo.trim()}`, 'forum'));
+    S.sub.topico = ref.id; location.hash = 'forum'; return 'Dúvida publicada. A gestão foi avisada.';
+  },
+  async resposta(f, tid) {
+    const t = S.forum[tid]; await add('forum_resp', { topicoId: tid, ownerId: S.uid, texto: f.texto.trim(), at: nowISO() });
+    const env = new Set([t.ownerId, ...C.respostasDe(tid).map(r => r.ownerId)]); env.delete(S.uid);
+    env.forEach(u => notify(u, `${nome(S.uid)} (${C.papel(S.uid)}) respondeu: ${t.titulo}`, 'forum'));
+    if (t.resolvido && t.ownerId === S.uid) await upd('forum/' + tid, { resolvido: null });
+    return 'Resposta enviada';
+  },
   async doc(f, rid, form) {
     const req = (C.niveisCfg()[(me().nivel || 0) + 1]?.requisitos || []).find(r => r.id === rid);
     const file = form.querySelector('#f-arquivo')?.files?.[0]; let arquivo = '';
@@ -520,6 +545,21 @@ document.addEventListener('submit', async e => {
   } catch (err) { console.error(err); toast(err?.code ? errMsg(err) : err.message || 'Não foi possível salvar.', 'bad'); }
   finally { if (btn) btn.disabled = false; }
 });
+
+// ---------- "Digitando…" no fórum
+let canal = null, canalTid = null;
+function ligarDigitando() {
+  const tid = S.view === 'forum' ? S.sub.topico : null;
+  if (tid === canalTid) return;
+  canal?.sair(); canal = null; canalTid = tid;
+  if (!tid) return;
+  canal = P.canalDigitando(tid, d => {
+    (S.digitando[tid] ||= {})[d.uid] = { ...d, t: Date.now() };
+    const el = document.getElementById('digitando'); if (el) el.innerHTML = V3.digitandoHtml(tid);
+    setTimeout(() => { const e2 = document.getElementById('digitando'); if (e2) e2.innerHTML = V3.digitandoHtml(tid); }, 4200);
+  });
+}
+document.addEventListener('input', e => { const tid = e.target.dataset?.digitando; if (tid && canal && canalTid === tid) canal.avisar({ uid: S.uid, nome: nome(S.uid), papel: C.papel(S.uid) }); });
 
 // ---------- App instalável e atualizações
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.installPrompt = e; schedule(); });

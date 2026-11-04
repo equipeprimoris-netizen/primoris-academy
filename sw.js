@@ -1,6 +1,6 @@
 // Primoris Academy — service worker: abertura rápida (cache do app) e notificações push.
-const VERSAO = 'primoris-v3';
-const APP = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/core.js', 'js/views.js', 'js/platform.js', 'manifest.webmanifest', 'icons/icon-192.png'];
+const VERSAO = 'primoris-v4';
+const APP = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/core.js', 'js/views.js', 'js/platform.js', 'js/views2.js', 'js/views3.js', 'manifest.webmanifest', 'icons/icon-192.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSAO).then(c => c.addAll(APP)).then(() => self.skipWaiting()));

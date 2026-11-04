@@ -8,6 +8,7 @@ import {
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
 } from './core.js';
 import * as V2 from './views2.js';
+import * as V3 from './views3.js';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
@@ -78,6 +79,10 @@ const funilChart = (uids) => {
 const desafioAtivoV = () => { try { return V2.desafioCard ? (S.config.desafios?.lista || []).filter(d => d.ativo !== false && d.inicio <= today() && d.fim >= today()) : []; } catch (e) { return []; } };
 export const embedVideo = url => { if (!url) return null; let m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/); if (m) return { tipo: 'youtube', id: m[1] }; m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/); if (m) return { tipo: 'vimeo', id: m[1] }; return null; };
 
+const WA_ICON = '<svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3 1 2.5c.1.2 1.6 2.5 4 3.5 1.5.6 2 .7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2Z"/></svg>';
+const projecaoMin = u => { const { mesesMilhao, falta } = projecaoLeve(u); return falta === 0 ? 0 : mesesMilhao; };
+const projecaoLeve = u => { const mm = geral().metaMilhao; const tot = vgvTotal(u); const falta = Math.max(0, mm - tot); const m = vgvMensal([u], 3).reduce((s, x) => s + x.valor, 0) / 3; return { falta, mesesMilhao: falta && m > 0 ? Math.ceil(falta / m) : null }; };
+
 // ---------- Telas de entrada
 export const loading = (msg = 'Preparando sua jornada…') => `<div class="center-screen boot">${brandBig(true)}<div class="boot-line"><span></span></div><p class="muted small">${esc(msg)}</p></div>`;
 export const fatal = msg => `<div class="center-screen">${brandBig()}<div class="notice">${esc(msg)}</div></div>`;
@@ -124,6 +129,7 @@ export const NAV = () => {
     ['resumo', 'Resumo da semana', 'chart'],
     ...(!szResumo(S.uid).concluida && szDias().length ? [['semana-zero', 'Semana Zero', 'flag']] : []),
     ['academy', 'Academy', 'book'],
+    ['forum', 'Fórum', 'msg'],
     ['carteira', 'Minha Carteira', 'users'],
     ['agenda', 'Agenda', 'calendar'],
     ['plano', 'Plano de Ação', 'checksq'],
@@ -146,7 +152,7 @@ export const shell = content => {
   <aside class="side" id="side">
     <div class="side-brand"><span class="mark">${crown(26)}</span><div><strong>PRIMORIS</strong><small>ACADEMY</small></div></div>
     <nav>${nav.map(([id, l, i]) => `<a href="#${id}" class="${S.view === id ? 'on' : ''}">${ic(i)}<span>${l}</span>${id === 'admin' && pend ? `<em class="badge">${pend}</em>` : ''}</a>`).join('')}</nav>
-    ${S.installPrompt ? `<button class="install" data-act="instalar">${ic('download', 16)} Instalar app</button>` : ''}<div class="side-foot"><span class="muted small">${esc(ROLES[role()])}</span><button class="linkbtn small" data-act="sair">Sair</button></div>
+    <a class="wa-grupo" href="https://chat.whatsapp.com/Ds8L37GWUHyBvAFvxwFAM2" target="_blank" rel="noopener">${WA_ICON}<span>Grupo Primoris no WhatsApp</span></a>${S.installPrompt ? `<button class="install" data-act="instalar">${ic('download', 16)} Instalar app</button>` : ''}<div class="side-foot"><span class="muted small">${esc(ROLES[role()])}</span><button class="linkbtn small" data-act="sair">Sair</button></div>
   </aside>
   <div class="main">
     <header class="top">
@@ -155,6 +161,7 @@ export const shell = content => {
       <div class="top-r">
         <div class="who hide-s"><span class="chip accent">${esc(nivelNome(m.nivel))}</span><span class="muted small">${gestor && gestor !== S.uid ? 'Gestor: ' + esc(nome(gestor)) : esc(ROLES[role()])} · ${fmtDate(today())}</span></div>
         <button class="btn accent sm hide-s" data-act="novo">${ic('plus', 16)} Novo</button>
+        <a class="iconbtn wa-top" href="https://chat.whatsapp.com/Ds8L37GWUHyBvAFvxwFAM2" target="_blank" rel="noopener" aria-label="Grupo Primoris no WhatsApp" title="Grupo Primoris no WhatsApp">${WA_ICON}</a>
         <button class="iconbtn bell" data-act="notifs" aria-label="Notificações">${ic('bell')}${naoLidas ? `<em class="badge">${naoLidas}</em>` : ''}</button>
         ${avatar(S.uid, 36)}
       </div>
@@ -547,7 +554,7 @@ export const equipe = () => {
   return pageHead('Minha Equipe', `${ids.length} integrantes`, isAdmin() ? `<select data-filter="equipe" aria-label="Equipe">${opt('', 'Todas as equipes', S.dash.equipe)}${list(S.equipes).map(e => opt(e.id, e.nome, S.dash.equipe)).join('')}</select>` : '')
     + filtroBar({ semEscopo: true }).replace(/<select data-filter="escopo"[\s\S]*?<\/select>/, '').replace(/<select data-filter="equipe"[\s\S]*?<\/select>/, '').replace(/<select data-filter="consultor"[\s\S]*?<\/select>/, '')
     + (pendAval.length ? `<div class="notice">${pendAval.length} consultor(es) aguardam sua avaliação na Semana Zero: ${pendAval.map(u => `<button class="linkbtn" data-act="perfil" data-id="${u}">${esc(nome(u))}</button>`).join(', ')}</div>` : '')
-    + (rows.length ? `<div class="card tablewrap"><table class="tbl"><thead><tr><th>Consultor</th><th>Nível</th><th>Semana Zero</th><th class="r">Contatos</th><th class="r">Prospecções</th><th class="r">Reuniões</th><th class="r">VGV período</th><th class="r">Rumo ao milhão</th><th>Atrasos</th></tr></thead><tbody>${rows.sort((a, b) => b.v - a.v).map(x => `<tr class="click" data-act="perfil" data-id="${x.u}"><td>${avatar(x.u, 26)} <strong>${esc(x.m?.nome)}</strong></td><td>${esc(nivelNome(x.m?.nivel))}</td><td>${x.sz.concluida ? chip('Concluída', 'ok') : `${x.sz.pct}%`}</td><td class="r">${x.c}</td><td class="r">${x.p}</td><td class="r">${x.re}</td><td class="r">${brlShort(x.v)}</td><td class="r">${pct(x.vt, geral().metaMilhao)}%</td><td>${x.at ? chip(x.at, 'bad') : ''}</td></tr>`).join('')}</tbody></table></div>` : empty('Equipe sem integrantes', isAdmin() ? 'Vincule consultores a equipes em Administração.' : 'Peça ao administrador para vincular consultores à sua equipe.'));
+    + (rows.length ? `<div class="card tablewrap"><table class="tbl"><thead><tr><th>Consultor</th><th>Nível</th><th>Semana Zero</th><th class="r">Contatos</th><th class="r">Prospecções</th><th class="r">Reuniões</th><th class="r">VGV período</th><th class="r">Rumo ao milhão</th><th class="r">Previsão</th><th>Atrasos</th></tr></thead><tbody>${rows.sort((a, b) => b.v - a.v).map(x => `<tr class="click" data-act="perfil" data-id="${x.u}"><td>${avatar(x.u, 26)} <strong>${esc(x.m?.nome)}</strong></td><td>${esc(nivelNome(x.m?.nivel))}</td><td>${x.sz.concluida ? chip('Concluída', 'ok') : `${x.sz.pct}%`}</td><td class="r">${x.c}</td><td class="r">${x.p}</td><td class="r">${x.re}</td><td class="r">${brlShort(x.v)}</td><td class="r">${pct(x.vt, geral().metaMilhao)}%</td><td class="r">${(() => { const p = projecaoMin(x.u); return p === 0 ? chip('Atingido', 'ok') : p ? p + ' meses' : '—'; })()}</td><td>${x.at ? chip(x.at, 'bad') : ''}</td></tr>`).join('')}</tbody></table></div>` : empty('Equipe sem integrantes', isAdmin() ? 'Vincule consultores a equipes em Administração.' : 'Peça ao administrador para vincular consultores à sua equipe.'));
 };
 export const perfil = uid => {
   const m = S.members[uid] || {}; const r = periodo(); const sz = szResumo(uid); const dias = szDias();
@@ -562,6 +569,7 @@ export const perfil = uid => {
       ${textos.map(x => `<h4>Dia ${x.i + 1}: resposta</h4><blockquote>${esc(x.p.texto)}</blockquote><form data-form="sz-coment" data-id="${uid}:${x.i}" class="row-a">${inp('coment', prog(uid).szComent?.[x.i] || '', 'placeholder="Comentário para o consultor"')}<button class="btn xs">Salvar</button></form>`).join('')}
       ${idxAval >= 0 ? `<h4>Avaliação da simulação (Dia ${idxAval + 1})</h4>${prog(uid).szAval ? `<p>Média ${prog(uid).szAval.media?.toFixed(1)} · ${prog(uid).szAval.aprovado ? chip('Aprovado', 'ok') : chip('Refazer', 'warn')}</p>` : ''}${!prog(uid).szAval?.aprovado ? `<form data-form="sz-aval" data-id="${uid}" class="rubrica">${rub.map((c, i) => `<label class="field inline"><span>${esc(c)}</span><select name="c${i}" id="f-c${i}">${[1, 2, 3, 4, 5].map(n => opt(n, n, 3)).join('')}</select></label>`).join('')}${field('Observações', txt('obs', '', 'rows="2"'))}<button class="btn sm accent">Salvar avaliação</button></form>` : ''}` : ''}
       ${idxPlano >= 0 && pl ? `<h4>Plano de ação (Dia ${idxPlano + 1})</h4><div class="kv"><span>Prospecções/dia</span><strong>${pl.prospeccoes}</strong><span>Contatos/dia</span><strong>${pl.contatos}</strong><span>Reuniões/semana</span><strong>${pl.reunioes}</strong><span>VGV 90 dias</span><strong>${brl(pl.vgv90)}</strong><span>Rotina</span><strong>${esc(pl.rotina)}</strong></div>${pl.status === 'enviado' ? `<div class="row-a"><button class="btn sm accent" data-act="plano-aprovar" data-id="${uid}">Aprovar plano</button><button class="btn sm" data-act="plano-devolver" data-id="${uid}">Devolver</button></div>` : `<p>${chip(pl.status === 'aprovado' ? 'Aprovado' : 'Devolvido', pl.status === 'aprovado' ? 'ok' : 'warn')}</p>`}` : ''}`)}
+    ${V3.projecaoCard(uid)}
     ${card('Carreira', (() => { const pn = proxNivel(uid); return pn ? `<p>Próximo: <strong>${esc(pn.nome)}</strong></p>${pn.definido ? `${bar(pn.pct, true)}<ul class="reqs">${pn.reqs.map(q => `<li class="${q.ok ? 'ok' : ''}">${ic(q.ok ? 'check' : 'lock', 14)} ${esc(q.label)} <span class="muted small">${esc(q.info)}</span></li>`).join('')}</ul>` : '<p class="muted">Critérios em definição.</p>'}` : '<p>Topo da carreira.</p>'; })())}
     ${card('Treinamentos', (() => { const cs = cursosPublicados(); return cs.length ? `<ul class="lst">${cs.map(c => { const st = cursoStatus(uid, c); return `<li><span>${esc(c.titulo)} ${c.obrigatorio ? chip('Obrigatório', 'accent') : ''}</span>${st.concluido ? chip('Concluído', 'ok') : st.pct + '%'}</li>`; }).join('')}</ul>` : '<p class="muted">Nenhum curso publicado.</p>'; })())}
     ${card('VGV mês a mês', barChart(vgvMensal([uid], 6), { h: 150 }))}
