@@ -1,9 +1,9 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=10';
-import * as V from './views.js?v=10';
-import * as P from './platform.js?v=10';
-import * as V2 from './views2.js?v=10';
-import * as V3 from './views3.js?v=10';
+import * as C from './core.js?v=11';
+import * as V from './views.js?v=11';
+import * as P from './platform.js?v=11';
+import * as V2 from './views2.js?v=11';
+import * as V3 from './views3.js?v=11';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -43,7 +43,15 @@ const run = async (fn, ok) => { try { const r = await fn(); if (ok) toast(ok, 'o
 let rq = false, deferred = false;
 const schedule = () => { if (rq) return; rq = true; requestAnimationFrame(() => { rq = false; render(); }); };
 function editing() { const a = document.activeElement; return a && $app.contains(a) && a.matches('input:not([type=checkbox]):not([type=radio]),textarea,select') && !a.dataset.filter; }
+const SPLASH_MS = 10000; let splashT = null;
+function splashAtivo() {
+  const rest = SPLASH_MS - performance.now(); if (rest <= 0 || S.fatal) return false;
+  if (!$app.querySelector('.boot.splash')) $app.innerHTML = V.loading(undefined, true);
+  if (!splashT) { const tick = setInterval(() => { const el = document.getElementById('boot-pct'); if (el) el.textContent = Math.min(100, Math.floor(performance.now() / (SPLASH_MS / 100))) + '%'; }, 100); splashT = setTimeout(() => { clearInterval(tick); const b = $app.querySelector('.boot.splash'); if (b) { b.classList.add('saindo'); setTimeout(() => { S.animNext = true; render(true); }, 380); } else render(true); }, rest); }
+  return true;
+}
 function render(force = false) {
+  if (splashAtivo()) return;
   if (!force && editing()) { deferred = true; return; }
   if (!force && S.view === 'academy' && document.querySelector('.player iframe')) { deferred = true; return; }
   deferred = false;

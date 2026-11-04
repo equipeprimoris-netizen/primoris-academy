@@ -623,3 +623,13 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .tipo-op input:checked + span { border-color: var(--accent); background: rgba(215,25,46,.16); box-shadow: 0 0 0 1px var(--accent) inset, 0 8px 24px rgba(215,25,46,.2); }
 .tipo-op input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 700px) { .vend-mes { grid-template-columns: 1fr; } .vendas-tbl td.acts { min-width: 160px; } }
+
+/* ---------- Abertura (10 segundos) */
+.boot.splash .brand-big strong { font-size: 40px; letter-spacing: .24em; }
+.boot.splash .brand-big img.crown { width: 150px; }
+.boot-line.fill { width: 240px; height: 4px; background: #1d1d21; }
+.boot-line.fill span { width: 100%; transform-origin: left center; transform: scaleX(0); background: linear-gradient(90deg, var(--red-deep), var(--red), var(--accent)); box-shadow: 0 0 12px rgba(227,40,60,.7); animation: bootFill 10s linear forwards; }
+@keyframes bootFill { to { transform: scaleX(1); } }
+.boot-msg { letter-spacing: .04em; } .boot-msg b { color: #fff; font-variant-numeric: tabular-nums; margin-left: 4px; }
+.boot.splash.saindo { animation: splashSai .38s ease-in forwards; }
+@keyframes splashSai { to { opacity: 0; transform: scale(1.04); filter: blur(4px); } }
