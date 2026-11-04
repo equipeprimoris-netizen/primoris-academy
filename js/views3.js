@@ -1,9 +1,9 @@
 // Primoris Academy — Fórum de dúvidas e projeção individual do consultor.
 import {
   S, esc, brl, brlShort, num, pct, fmtDT, fmtDate, list, firstName, nome, isGestor, isAdmin, minhasEquipes, equipeDe,
-  CATEGORIAS_FORUM, papel, respostasDe, statusTopico, projecao, initials,
-} from './core.js?v=8';
-import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=8';
+  CATEGORIAS_FORUM, papel, respostasDe, statusTopico, projecao, initials, vgv, today,
+} from './core.js?v=9';
+import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=9';
 
 const autor = (uid, extra = '') => {
   const m = S.members[uid] || {}; const g = ['gestor', 'admin', 'superadmin'].includes(m.role);
@@ -81,9 +81,11 @@ export const eventosTile = () => {
 
 export const eventos = () => {
   const fut = eventosFuturos(); const minhas = list(S.inscricoes).filter(i => i.ownerId === S.uid && !i.canceladaEm).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
-  return pageHead(`<span class="balao-t">${ic('balao', 30)}</span> Eventos`, 'Inscreva-se e leve seus convidados. Você recebe a confirmação por e-mail.', isAdmin() ? `<button class="btn sm" data-act="ad-eventos">${ic('gear', 16)} Gerenciar eventos</button>` : '')
+  const gestao = isGestor() && S.sub.evGestao;
+  if (gestao) return pageHead(`<span class="balao-t">${ic('balao', 30)}</span> Organizar eventos`, 'Somente gestores criam e editam eventos e acompanham os inscritos.', `<button class="btn sm" data-act="ad-eventos">${ic('back', 16)} Ver como consultor</button>`) + eventosAdmin();
+  return pageHead(`<span class="balao-t">${ic('balao', 30)}</span> Eventos`, 'Inscreva-se e leve seus convidados. Você recebe a confirmação por e-mail.', isGestor() ? `<button class="btn sm" data-act="ad-eventos">${ic('gear', 16)} Organizar eventos</button>` : '')
     + (fut.length ? `<div class="eventos">${fut.map(e => { const m = minhaInscricao(e.id); const ins = inscritosDe(e.id); const total = ins.reduce((s, i) => s + pessoas(i), 0); const lot = e.limite && total >= Number(e.limite); return `<article class="evento card"><div class="ev-data"><span>${e.data ? esc(e.data.slice(8, 10)) : '--'}</span><small>${e.data ? esc(['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][Number(e.data.slice(5, 7)) - 1]) : ''}</small></div><div class="ev-info"><h3>${esc(e.titulo)}</h3><p class="muted small">${dataEvento(e)}${e.local ? ' · ' + esc(e.local) : ''}</p>${e.descricao ? `<p>${esc(e.descricao).replace(/\n/g, '<br>')}</p>` : ''}<p class="small muted">${total} pessoa(s) confirmada(s)${e.limite ? ` de ${num(e.limite)} vagas` : ''}</p></div><div class="ev-acao">${m ? `${chip('Inscrito', 'ok')} ${statusEmail(m)}<div class="row-a"><button class="btn xs" data-act="inscrever" data-id="${e.id}">Editar</button><button class="btn xs danger" data-act="cancelar-inscricao" data-id="${m.id}">Cancelar</button></div>` : lot ? chip('Esgotado', 'bad') : `<button class="btn accent" data-act="inscrever" data-id="${e.id}">${ic('balao', 18)} Inscrever-se</button>`}</div></article>`; }).join('')}</div>`
-      : empty('Nenhum evento aberto', isAdmin() ? 'Crie um evento em Gerenciar eventos para liberar as inscrições.' : 'Assim que a Primoris abrir um evento, ele aparece aqui.'))
+      : empty('Nenhum evento aberto', isGestor() ? 'Crie um evento em Organizar eventos para liberar as inscrições.' : 'Assim que a Primoris abrir um evento, ele aparece aqui.'))
     + (minhas.length ? `<section class="card tablewrap"><header class="card-h"><h3>Minhas inscrições</h3></header><table class="tbl"><thead><tr><th>Evento</th><th>Data</th><th class="r">Visitantes</th><th>Confirmação</th></tr></thead><tbody>${minhas.map(i => { const e = S.eventos[i.eventoId] || {}; return `<tr><td>${esc(e.titulo || 'Evento')}</td><td>${dataEvento(e)}</td><td class="r">${(i.visitantes || []).filter(Boolean).length}</td><td>${statusEmail(i)}</td></tr>`; }).join('')}</tbody></table></section>` : '');
 };
 
@@ -121,3 +123,26 @@ export const eventoForm = (e = {}) => `<form data-form="evento" data-id="${e.id 
   ${field('Status', sel('ativo', [['1', 'Inscrições abertas'], ['0', 'Encerrado']], e.ativo === false ? '0' : '1'))}
   <label class="check span2"><input type="checkbox" name="avisar" id="f-avisar" ${e.id ? '' : 'checked'}> <span>Avisar todos por notificação</span></label>
   <div class="span2 row-a"><button class="btn accent">Salvar evento</button></div></form>`;
+
+// ---------- Meta do mês: coroa subindo até os brindes
+export const MARCOS_PADRAO = [{ valor: 300000, brinde: 'Brinde' }, { valor: 500000, brinde: 'Brinde' }, { valor: 1000000, brinde: 'Brinde' }];
+export const marcos = () => { const l = S.config.metaMes?.marcos; return (Array.isArray(l) && l.length ? l : MARCOS_PADRAO).map(m => ({ valor: Number(m.valor) || 0, brinde: String(m.brinde || 'Brinde') })).filter(m => m.valor > 0).sort((a, b) => a.valor - b.valor); };
+export const mesAtual = () => { const t = today(); return { from: t.slice(0, 8) + '01', to: t, mk: t.slice(0, 7) }; };
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+export const metaMesCard = (uids, eu) => {
+  const r = mesAtual(); const val = vgv(uids, r); const ms = marcos(); if (!ms.length) return '';
+  const topo = ms[ms.length - 1].valor; const p = Math.min(100, (val / topo) * 100);
+  const prox = ms.find(m => val < m.valor); const ganhos = ms.filter(m => val >= m.valor).length;
+  const mes = MESES[Number(r.mk.slice(5, 7)) - 1];
+  const torre = `<div class="mm-torre" style="--p:${p.toFixed(1)}%"><div class="mm-trilho"><div class="mm-fill"></div></div>
+    ${ms.map(m => { const ok = val >= m.valor; return `<div class="mm-marco ${ok ? 'ok' : ''}" style="--y:${((m.valor / topo) * 100).toFixed(1)}%"><span class="mm-linha"></span><span class="mm-gift">${ic('gift', 18)}</span><span class="mm-lbl"><strong>${brlShort(m.valor)}</strong><small>${ok ? 'Conquistado!' : esc(m.brinde)}</small></span></div>`; }).join('')}
+    <div class="mm-coroa"><img src="img/coroa-64.webp" width="44" height="31" alt=""></div></div>`;
+  const resumo = `<div class="mm-resumo"><span class="muted small">VGV validado em ${mes}</span><strong class="big accent-t" data-n="${val}" data-f="brl">${brlShort(val)}</strong>
+    ${prox ? `<p>Próximo brinde em <strong>${brlShort(prox.valor)}</strong></p><p class="muted small">Faltam ${brlShort(prox.valor - val)} para ${esc(prox.brinde.toLowerCase() === 'brinde' ? 'o próximo brinde' : prox.brinde)}.</p>` : `<p class="mm-top">${ic('trophy', 18)} Todos os brindes do mês conquistados!</p>`}
+    <div class="mm-chips">${ms.map(m => `<span class="chip ${val >= m.valor ? 'ok' : ''}">${ic('gift', 13)} ${brlShort(m.valor)}${m.brinde !== 'Brinde' ? ' · ' + esc(m.brinde) : ''}</span>`).join('')}</div>
+    <p class="muted small">${ganhos} de ${ms.length} brindes · ${eu ? 'sua meta individual' : 'meta do escopo selecionado'} · reinicia todo dia 1º</p></div>`;
+  return card(`${ic('gift', 18)} Meta do mês`, `<div class="metames">${torre}${resumo}</div>`, isAdmin() ? '<button class="btn xs" data-act="editar-marcos">Editar brindes</button>' : '', 'span2');
+};
+export const marcosForm = () => `<form data-form="marcos" class="form-grid"><p class="muted small span2">Defina os valores de VGV validado no mês e o brinde de cada etapa. A coroa sobe até o último valor.</p>
+  <div class="span2 marcos-l">${[...marcos(), {}, {}].slice(0, 8).map((m, i) => `<div class="row-a" data-row="marco"><label class="field"><span>VGV do mês (R$)</span><input name="m_valor" type="number" min="0" step="1000" value="${m.valor || ''}"></label><label class="field grow"><span>Brinde</span><input name="m_brinde" value="${esc(m.brinde || '')}" placeholder="Ex.: Brinde, Jantar, Viagem"></label></div>`).join('')}</div>
+  <div class="span2 row-a"><button class="btn accent">Salvar brindes</button></div></form>`;

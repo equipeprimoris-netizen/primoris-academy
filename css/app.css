@@ -571,3 +571,35 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .visitantes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
 .tbl tr.sel td { background: rgba(215,25,46,.08); }
 @media (max-width: 700px) { .evento { grid-template-columns: 64px 1fr; } .ev-acao { grid-column: 1 / -1; justify-items: start; } .ev-data { width: 62px; height: 66px; } .visitantes { grid-template-columns: 1fr; } .evento-tile { grid-template-columns: auto 1fr; } .et-cta { grid-column: 1 / -1; } }
+
+/* ---------- Meta do mês (coroa subindo até os brindes) */
+.metames { display: grid; grid-template-columns: minmax(200px, 300px) 1fr; gap: 28px; align-items: center; }
+.mm-torre { position: relative; height: 260px; margin: 18px 0 10px; padding-left: 8px; }
+.mm-trilho { position: absolute; left: 30px; top: 0; bottom: 0; width: 18px; border-radius: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); overflow: hidden; }
+.mm-fill { position: absolute; left: 0; right: 0; bottom: 0; height: var(--p); background: linear-gradient(0deg, var(--red-deep), var(--red) 55%, var(--accent)); box-shadow: 0 0 22px rgba(227,40,60,.6); }
+.mm-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, transparent, rgba(255,255,255,.25), transparent); background-size: 100% 60px; animation: mmBrilho 2.4s linear infinite; }
+@keyframes mmBrilho { from { background-position: 0 100%; } to { background-position: 0 -60px; } }
+.mm-coroa { position: absolute; left: 39px; bottom: var(--p); transform: translate(-50%, 50%); z-index: 2; }
+.mm-coroa img { width: 44px; height: auto; display: block; filter: drop-shadow(0 4px 14px rgba(227,40,60,.8)); animation: mmFlutua 2.6s ease-in-out infinite; }
+@keyframes mmFlutua { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+#view.enter .mm-fill { animation: mmSobeH 1.6s var(--ease) both; }
+#view.enter .mm-coroa { animation: mmSobeB 1.6s var(--ease) both; }
+@keyframes mmSobeH { from { height: 0; } }
+@keyframes mmSobeB { from { bottom: 0; } }
+.mm-marco { position: absolute; left: 22px; right: 0; bottom: var(--y); transform: translateY(50%); display: flex; align-items: center; gap: 8px; }
+.mm-linha { width: 34px; height: 2px; background: rgba(255,255,255,.25); }
+.mm-gift { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #1c1c1f; border: 1px solid rgba(255,255,255,.18); color: #a3a3ab; margin-left: 8px; }
+.mm-lbl { display: grid; line-height: 1.15; } .mm-lbl strong { font-size: 15px; } .mm-lbl small { color: var(--muted, #a3a3ab); font-size: 12px; }
+.mm-marco.ok .mm-linha { background: var(--accent); }
+.mm-marco.ok .mm-gift { background: var(--red); border-color: var(--accent); color: #fff; box-shadow: 0 0 18px rgba(227,40,60,.65); animation: mmPresente 2.2s ease-in-out infinite; }
+.mm-marco.ok .mm-lbl small { color: #fff; font-weight: 700; }
+@keyframes mmPresente { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-12deg); } 20% { transform: rotate(10deg); } 30% { transform: rotate(0); } }
+.mm-resumo { display: grid; gap: 6px; } .mm-resumo .big { font-size: 34px; } .mm-resumo p { margin: 0; }
+.mm-top { display: flex; gap: 8px; align-items: center; font-weight: 700; color: #fff; }
+.mm-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.mm-chips .chip { display: inline-flex; gap: 4px; align-items: center; }
+.metames.festa .mm-coroa img { animation: mmFesta .9s ease-in-out 3; }
+@keyframes mmFesta { 50% { transform: translateY(-14px) scale(1.25) rotate(8deg); } }
+.marcos-l { display: grid; gap: 6px; } .marcos-l .grow { flex: 1; }
+@media (max-width: 700px) { .metames { grid-template-columns: 1fr; gap: 8px; } .mm-torre { height: 230px; } }
+@media (prefers-reduced-motion: reduce) { .mm-fill::after, .mm-coroa img, .mm-marco.ok .mm-gift { animation: none !important; } }

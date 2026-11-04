@@ -1,9 +1,9 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=8';
-import * as V from './views.js?v=8';
-import * as P from './platform.js?v=8';
-import * as V2 from './views2.js?v=8';
-import * as V3 from './views3.js?v=8';
+import * as C from './core.js?v=9';
+import * as V from './views.js?v=9';
+import * as P from './platform.js?v=9';
+import * as V2 from './views2.js?v=9';
+import * as V3 from './views3.js?v=9';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -88,7 +88,7 @@ function montarVideo() {
   carregarYT().then(YT => { if (!el.isConnected) return; ytPlayer = new YT.Player(el, { videoId: video, playerVars: { start: Math.max(0, Math.floor(ultimo) - 3), rel: 0, modestbranding: 1, playsinline: 1 }, events: { onStateChange: ev => { if (ev.data === YT.PlayerState.ENDED) salvar(ytPlayer.getDuration(), ytPlayer.getDuration()); } } }); ytTimer = setInterval(() => { if (!document.getElementById(ytPlayer?.getIframe?.()?.id || '') && !ytPlayer?.getIframe?.()?.isConnected) { clearInterval(ytTimer); return; } try { if (ytPlayer.getPlayerState?.() === 1) salvar(ytPlayer.getCurrentTime(), ytPlayer.getDuration()); } catch (e) { /* */ } }, 5000); });
 }
 function afterRender() {
-  montarVideo();
+  montarVideo(); checarMarcos();
   ligarDigitando();
   const sim = document.getElementById('sim'); if (sim) document.getElementById('sim-out').innerHTML = V.simCalc(Object.fromEntries(new FormData(sim)));
   if (S.focusFilter) { const el = document.querySelector(`[data-filter="${S.focusFilter}"]`); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) { /* */ } } S.focusFilter = null; }
@@ -165,7 +165,7 @@ async function boot() {
   if (!S.uid) { S.fatal = 'Entre na sua conta Claude para acessar a Primoris Academy.'; return render(true); }
   S.owner = !!owner; S.editor = !!editor; S.canWrite = cw !== false; S.profile = profile;
   S.ready = true;
-  ['geral', 'semanaZero', 'carreira', 'academy', 'comissoes', 'desafios', 'mensagens'].forEach(k => sub('cfg:' + k, db.doc('config/' + k), d => { S.config[k] = d.exists ? d.data() : null; }));
+  ['geral', 'semanaZero', 'carreira', 'academy', 'comissoes', 'desafios', 'mensagens', 'metaMes'].forEach(k => sub('cfg:' + k, db.doc('config/' + k), d => { S.config[k] = d.exists ? d.data() : null; }));
   sub('equipes', db.collection('equipes'), s => { S.equipes = toMap(s); });
   sub('solicitacoes', db.collection('solicitacoes'), s => { S.solicitacoes = toMap(s); });
   sub('members', db.collection('members'), async s => {
@@ -205,6 +205,20 @@ const registrarAtividade = async (c, tipo, resultado, texto = '') => {
   await upd('contatos/' + c.id, patch);
   celebrar();
 };
+let marcosChecados = '';
+function checarMarcos() {
+  try {
+    if (!S.dataReady || !S.uid || !S.members[S.uid] || !S.progresso[S.uid]) return;
+    const r = V3.mesAtual(); const val = C.vgv([S.uid], r); const ganhos = V3.marcos().filter(m => val >= m.valor);
+    const key = r.mk + ':' + ganhos.length; if (key === marcosChecados) return; marcosChecados = key;
+    const ja = Number(prog(S.uid).marcosMes?.[r.mk]) || 0; if (ganhos.length <= ja) return;
+    const m = ganhos[ganhos.length - 1];
+    merge('progresso/' + S.uid, { marcosMes: { [r.mk]: ganhos.length } }, S.progresso[S.uid]).catch(() => {});
+    add('feedbacks', { tipo: 'mural', de: S.uid, texto: `${C.firstName(nome(S.uid))} bateu ${C.brlShort(m.valor)} em VGV no mês e conquistou um brinde!`, equipeId: C.equipeDe(S.uid), auto: true, at: nowISO() }).catch(() => {});
+    toast(`Parabéns! Você bateu ${C.brlShort(m.valor)} no mês e conquistou ${m.brinde.toLowerCase() === 'brinde' ? 'um brinde' : m.brinde}!`, 'ok');
+    document.querySelector('.metames')?.classList.add('festa');
+  } catch (e) { /* opcional */ }
+}
 async function celebrar() {
   try {
     const t = today(); const p = prog(S.uid); const meta = C.metasDe(S.uid).prospeccoes; const n = C.prospeccoes([S.uid], { from: t, to: t }).length;
@@ -227,7 +241,8 @@ async function baixar(filename, data, tipo = 'text/csv') {
 const ACT = {
   inscrever: id => { const e = S.eventos[id]; if (!e) return; const m = list(S.inscricoes).find(i => i.eventoId === id && i.ownerId === S.uid && !i.canceladaEm); modal(m ? 'Editar inscrição' : 'Inscrição no evento', V3.inscricaoForm(e, m || {}), { wide: true }); },
   'cancelar-inscricao': async id => { if (await confirmar('Cancelar inscrição', 'Sua inscrição e a dos seus visitantes serão canceladas.', 'Cancelar inscrição')) run(() => upd('inscricoes/' + id, { canceladaEm: nowISO() }), 'Inscrição cancelada').then(() => admins().forEach(a => notify(a, `${nome(S.uid)} cancelou a inscrição em ${S.eventos[S.inscricoes[id]?.eventoId]?.titulo || 'evento'}`, 'eventos'))); },
-  'ad-eventos': () => { S.sub.adTab = 'eventos'; location.hash = 'admin'; },
+  'ad-eventos': () => { S.sub.evGestao = !S.sub.evGestao; if (location.hash !== '#eventos') location.hash = 'eventos'; else schedule(); },
+  'editar-marcos': () => modal('Brindes da meta do mês', V3.marcosForm(), { wide: true }),
   'novo-evento': () => modal('Novo evento', V3.eventoForm(), { wide: true }),
   'editar-evento': id => modal('Editar evento', V3.eventoForm({ id, ...S.eventos[id] }), { wide: true }),
   'ev-sel': id => { S.sub.evSel = id; render(true); },
@@ -394,7 +409,7 @@ const FORM = {
     const d = { eventoId: eid, nome: f.nome.trim(), email, celular: C.fmtPhone(cel), visitantes, updatedAt: nowISO() };
     if (insId) { await upd('inscricoes/' + insId, d); return 'Inscrição atualizada'; }
     await add('inscricoes', { ...d, ownerId: S.uid, equipeId: C.equipeDe(S.uid), at: nowISO() });
-    admins().forEach(a => notify(a, `${d.nome} se inscreveu em ${e.titulo} com ${qtd} visitante(s)`, 'eventos'));
+    [...new Set([...admins(), ...gestoresDe(S.uid)])].forEach(a => notify(a, `${d.nome} se inscreveu em ${e.titulo} com ${qtd} visitante(s)`, 'eventos'));
     return 'Inscrição confirmada! Enviamos a confirmação para o seu e-mail.';
   },
   async evento(f, id) {
@@ -430,6 +445,11 @@ const FORM = {
     await put('config/desafios', { lista: l, updatedAt: nowISO() });
     if (f.anunciar) C.ativos().forEach(m => notify(m.id, `Novo desafio: ${d.titulo} (meta ${d.indicador === 'vgv' ? C.brlShort(d.meta) : d.meta} · até ${C.fmtDate(d.fim)})`, 'conquistas'));
     audit('Desafio salvo', d.titulo); return 'Desafio salvo';
+  },
+  async marcos(f, _, form) {
+    const l = [...form.querySelectorAll('[data-row=marco]')].map(r => ({ valor: Number(r.querySelector('[name=m_valor]').value) || 0, brinde: r.querySelector('[name=m_brinde]').value.trim() || 'Brinde' })).filter(m => m.valor > 0).sort((a, b) => a.valor - b.valor);
+    if (!l.length) throw new Error('Informe pelo menos um valor.');
+    await put('config/metaMes', { marcos: l, updatedAt: nowISO(), updatedBy: S.uid }); audit('Brindes da meta do mês alterados', l.map(m => m.valor).join(', ')); return 'Brindes salvos';
   },
   async comissoes(f, _, form) {
     const regras = [...form.querySelectorAll('[data-row=regra]')].map(r => ({ produto: r.querySelector('[name=r_produto]').value, administradora: r.querySelector('[name=r_adm]').value.trim() || '*', nivel: r.querySelector('[name=r_nivel]').value, percentual: Number(String(r.querySelector('[name=r_pct]').value).replace(',', '.')) })).filter(r => r.percentual > 0);
