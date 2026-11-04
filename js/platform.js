@@ -125,4 +125,38 @@ const downloads = {
   },
 };
 
+// ---------- Arquivos (Supabase Storage, bucket privado "documentos")
+export const enviarArquivo = async (file, nomeBase) => {
+  const ext = (file.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const path = `${session.user.id}/${nomeBase}-${Date.now()}.${ext}`;
+  const { error } = await sb.storage.from('documentos').upload(path, file, { upsert: false, contentType: file.type });
+  if (error) throw { code: 'invalid_argument', message: error.message };
+  return path;
+};
+export const linkArquivo = async path => {
+  const { data, error } = await sb.storage.from('documentos').createSignedUrl(path, 300);
+  if (error) throw { code: 'invalid_argument', message: error.message };
+  return data.signedUrl;
+};
+export const temArquivos = () => !noClaude() && !!sb;
+
+// ---------- Notificações push
+const VAPID = 'BDYY1axK-Ttpzs1ucmOB8pNktXYHMQS8UNtg1grO9Hqmixvl7VhdFooeKd8pE9jYjIxSICg-FWvbhjkkc6rz2Lw';
+const b64 = s => { const p = '='.repeat((4 - (s.length % 4)) % 4); const r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+export const pushSuportado = () => !noClaude() && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+export const pushStatus = async () => {
+  if (!pushSuportado()) return 'indisponivel';
+  if (Notification.permission === 'denied') return 'bloqueado';
+  const reg = await navigator.serviceWorker.getRegistration(); const s = await reg?.pushManager.getSubscription();
+  return s ? 'ativo' : 'inativo';
+};
+export const ativarPush = async () => {
+  const perm = await Notification.requestPermission(); if (perm !== 'granted') return 'bloqueado';
+  const reg = await navigator.serviceWorker.ready;
+  const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) }));
+  const json = sub.toJSON(); const id = session.user.id.slice(0, 8) + '_' + btoa(json.endpoint).replace(/[^a-zA-Z0-9]/g, '').slice(-24);
+  await docRef('push/' + id).set({ ownerId: session.user.id, sub: json, ua: navigator.userAgent.slice(0, 120), at: new Date().toISOString() });
+  return 'ativo';
+};
+
 export const use = async name => (noClaude() ? window.claude.use(name) : session ? { db, user, downloads }[name] || null : null);

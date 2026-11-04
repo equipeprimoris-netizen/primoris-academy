@@ -6,8 +6,8 @@ export const S = {
   profile: null, ready: false, fatal: null, membersLoaded: false, started: false,
   members: {}, equipes: {}, cursos: {}, contatos: {}, atividades: {}, reunioes: {},
   vendas: {}, validacoes: {}, tarefas: {}, progresso: {}, feedbacks: {}, notifs: {},
-  solicitacoes: {}, progressoes: {}, audit: {},
-  config: { geral: null, semanaZero: null, carreira: null, academy: null },
+  solicitacoes: {}, progressoes: {}, audit: {}, pagamentos: {},
+  config: { geral: null, semanaZero: null, carreira: null, academy: null, comissoes: null, desafios: null, mensagens: null },
   view: 'inicio', sub: {}, dash: { escopo: 'me', periodo: 'mes', equipe: '', consultor: '' },
   stale: false,
 };
@@ -307,4 +307,65 @@ export const parseCSV = text => {
   }
   if (cur || row.length) { row.push(cur); rows.push(row); }
   return rows.filter(r => r.some(c => c.trim()));
+};
+
+// ---------- Comissões (regras configuráveis; só vendas validadas geram comissão)
+export const regrasComissao = () => S.config.comissoes?.regras || [];
+export const regraDaVenda = v => {
+  const nivel = String(S.members[v.ownerId]?.nivel ?? '');
+  const ok = (campo, val) => !campo || campo === '*' || String(campo).toLowerCase() === String(val || '').toLowerCase();
+  return regrasComissao().filter(r => ok(r.produto, v.produto) && ok(r.administradora, v.administradora) && ok(r.nivel, nivel))
+    .sort((a, b) => [b.produto, b.administradora, b.nivel].filter(x => x && x !== '*').length - [a.produto, a.administradora, a.nivel].filter(x => x && x !== '*').length)[0] || null;
+};
+export const comissaoVenda = v => { const r = regraDaVenda(v); const p = Number(r?.percentual) || 0; return { pct: p, valor: Math.round((Number(v.valor) || 0) * p) / 100, regra: r }; };
+export const mesValidacao = v => (S.validacoes[v.id]?.at ? monthKey(dayOf(S.validacoes[v.id].at)) : '');
+export const comissoesDoMes = (uids, mk) => vendasValidadas(uids).filter(v => mesValidacao(v) === mk).map(v => ({ ...v, com: comissaoVenda(v) }));
+export const pagamento = (uid, mk) => S.pagamentos?.[`${uid}_${mk}`];
+
+// ---------- Desafios semanais
+export const desafios = () => (S.config.desafios?.lista || []).filter(d => d.ativo !== false);
+export const desafioAtivo = () => { const t = today(); return desafios().filter(d => d.inicio <= t && d.fim >= t); };
+export const INDICADORES = { prospeccoes: 'Prospecções', contatos: 'Contatos novos', reunioes: 'Reuniões realizadas', vendas: 'Vendas validadas', vgv: 'VGV validado (R$)', treinamentos: 'Treinamentos concluídos' };
+export const valorIndicador = (uid, ind, r) => {
+  if (ind === 'prospeccoes') return prospeccoes([uid], r).length;
+  if (ind === 'contatos') return contatosDe([uid]).filter(c => inP(dayOf(c.createdAt), r)).length;
+  if (ind === 'reunioes') return reunioesDe([uid]).filter(x => x.status === 'realizada' && inP(dayOf(x.realizadaAt), r)).length;
+  if (ind === 'vendas') return vendasValidadas([uid], r).length;
+  if (ind === 'vgv') return vgv([uid], r);
+  if (ind === 'treinamentos') return treinamentosConcluidos([uid], r);
+  return 0;
+};
+export const desafioProgresso = (uid, d) => { const v = valorIndicador(uid, d.indicador, { from: d.inicio, to: d.fim }); return { v, pct: pct(v, Number(d.meta) || 1), ok: v >= Number(d.meta) }; };
+
+// ---------- Diagnóstico do funil por equipe
+export const taxasFunil = (uids, r) => {
+  const cont = contatosDe(uids).filter(c => inP(dayOf(c.createdAt), r)).length;
+  const prosp = prospeccoes(uids, r).length;
+  const reun = reunioesDe(uids, r); const real = reun.filter(x => x.status === 'realizada').length;
+  const vend = vendasValidadas(uids, r).length;
+  return { cont, prosp, ag: reun.length, real, vend, pr: prosp ? reun.length / prosp : 0, rr: reun.length ? real / reun.length : 0, rv: real ? vend / real : 0 };
+};
+const cursoSobre = re => cursosPublicados().find(c => re.test(c.titulo + ' ' + (c.descricao || '')));
+export const diagnostico = r => {
+  const geralT = taxasFunil(ativos().map(m => m.id), r);
+  return list(S.equipes).map(e => {
+    const ids = membrosDaEquipe([e.id]); const t = taxasFunil(ids, r); const alertas = [];
+    const baixo = (a, b) => b > 0 && a < b * 0.7;
+    if (ids.length && t.prosp < ids.length * 5) alertas.push({ etapa: 'Prospecção', txt: `Poucas prospecções: ${t.prosp} no período para ${ids.length} consultores.`, curso: cursoSobre(/prospec|abordagem|carteira/i) });
+    if (baixo(t.pr, geralT.pr)) alertas.push({ etapa: 'Agendamento', txt: `Converte ${Math.round(t.pr * 100)}% das prospecções em reunião (operação: ${Math.round(geralT.pr * 100)}%).`, curso: cursoSobre(/abordagem|reuni|prospec/i) });
+    if (baixo(t.rr, geralT.rr)) alertas.push({ etapa: 'Comparecimento', txt: `${Math.round(t.rr * 100)}% das reuniões acontecem (operação: ${Math.round(geralT.rr * 100)}%). Reforce a confirmação na véspera.`, curso: cursoSobre(/follow|reuni/i) });
+    if (baixo(t.rv, geralT.rv)) alertas.push({ etapa: 'Fechamento', txt: `Fecha ${Math.round(t.rv * 100)}% das reuniões realizadas (operação: ${Math.round(geralT.rv * 100)}%).`, curso: cursoSobre(/fechamento|obje|negocia/i) });
+    return { e, ids, t, alertas };
+  }).concat([{ e: { id: '*', nome: 'Toda a operação' }, ids: ativos().map(m => m.id), t: geralT, alertas: [] }]);
+};
+
+// ---------- Resumo da semana
+export const resumoSemana = uids => {
+  const t = today(); const r1 = { from: addDays(t, -6), to: t }; const r0 = { from: addDays(t, -13), to: addDays(t, -7) };
+  const k = r => ({ prosp: prospeccoes(uids, r).length, cont: contatosDe(uids).filter(c => inP(dayOf(c.createdAt), r)).length, real: reunioesDe(uids).filter(x => x.status === 'realizada' && inP(dayOf(x.realizadaAt), r)).length, vend: vendasValidadas(uids, r).length, vgv: vgv(uids, r) });
+  const parados = uids.filter(u => !szResumo(u).concluida && S.members[u]?.dataEntrada && daysBetween(S.members[u].dataEntrada, t) > 7);
+  const semAtividade = uids.filter(u => !ativDe([u], r1).length && !contatosDe([u]).some(c => inP(dayOf(c.createdAt), r1)));
+  const pendentes = list(S.vendas).filter(v => uids.includes(v.ownerId) && ['registrada', 'pre_aprovada'].includes(vendaStatus(v)));
+  const destaque = uids.map(u => ({ u, v: vgv([u], r1), p: prospeccoes([u], r1).length })).sort((a, b) => b.v - a.v || b.p - a.p)[0];
+  return { atual: k(r1), anterior: k(r0), parados, semAtividade, pendentes, destaque, r1 };
 };

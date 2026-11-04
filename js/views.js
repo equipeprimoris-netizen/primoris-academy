@@ -7,6 +7,7 @@ import {
   szDias, szDia, szResumo, cursosPublicados, cursoStatus, cursosObrigatorios, treinamentosConcluidos, certCodigo, niveisCfg,
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
 } from './core.js';
+import * as V2 from './views2.js';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
@@ -50,18 +51,18 @@ export const crown = (s = 40, cls = '') => `<svg class="crown ${cls}" width="${s
 export const brandBig = (anim = false) => `<div class="brand-big">${crown(54, anim ? 'anim' : '')}<strong>PRIMORIS</strong><span>ACADEMY</span></div>`;
 
 // ---------- Peças
-const chip = (txt, tone = '') => `<span class="chip ${tone}">${esc(txt)}</span>`;
-const bar = (v, accent = false) => `<div class="bar"><span class="${accent ? 'accent' : ''}" style="width:${Math.min(100, Math.max(0, v))}%"></span></div>`;
-const avatar = (uid, size = 32) => `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size / 2.6)}px">${esc(initials(nome(uid)))}</span>`;
-const empty = (titulo, texto, acao = '') => `<div class="empty"><strong>${esc(titulo)}</strong><p>${esc(texto)}</p>${acao}</div>`;
-const card = (titulo, body, extra = '', cls = '') => `<section class="card ${cls}"><header class="card-h"><h3>${titulo}</h3>${extra}</header>${body}</section>`;
-const kpi = (label, valor, sub = '', link = '', accent = false, n = null, f = 'num') => `<button class="kpi ${accent ? 'accent' : ''}" ${link ? `data-act="go" data-id="${link}"` : 'disabled'}><span class="kpi-l">${esc(label)}</span><span class="kpi-v" ${n != null ? `data-n="${n}" data-f="${f}"` : ''}>${valor}</span>${sub ? `<span class="kpi-s">${sub}</span>` : ''}</button>`;
-const opt = (v, l, sel) => `<option value="${esc(v)}" ${String(v) === String(sel) ? 'selected' : ''}>${esc(l)}</option>`;
-const field = (label, input, cls = '') => `<label class="field ${cls}"><span>${label}</span>${input}</label>`;
-const inp = (name, val = '', attrs = '') => `<input id="f-${name}" name="${name}" value="${esc(val)}" ${attrs}>`;
-const sel = (name, opts, val, attrs = '') => `<select id="f-${name}" name="${name}" ${attrs}>${opts.map(o => (Array.isArray(o) ? opt(o[0], o[1], val) : opt(o, o, val))).join('')}</select>`;
-const txt = (name, val = '', attrs = '') => `<textarea id="f-${name}" name="${name}" ${attrs}>${esc(val)}</textarea>`;
-const statusVenda = v => { const [l, t] = STATUS_VENDA[vendaStatus(v)] || ['—', '']; return chip(l, t); };
+export const chip = (txt, tone = '') => `<span class="chip ${tone}">${esc(txt)}</span>`;
+export const bar = (v, accent = false) => `<div class="bar"><span class="${accent ? 'accent' : ''}" style="width:${Math.min(100, Math.max(0, v))}%"></span></div>`;
+export const avatar = (uid, size = 32) => `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size / 2.6)}px">${esc(initials(nome(uid)))}</span>`;
+export const empty = (titulo, texto, acao = '') => `<div class="empty"><strong>${esc(titulo)}</strong><p>${esc(texto)}</p>${acao}</div>`;
+export const card = (titulo, body, extra = '', cls = '') => `<section class="card ${cls}"><header class="card-h"><h3>${titulo}</h3>${extra}</header>${body}</section>`;
+export const kpi = (label, valor, sub = '', link = '', accent = false, n = null, f = 'num') => `<button class="kpi ${accent ? 'accent' : ''}" ${link ? `data-act="go" data-id="${link}"` : 'disabled'}><span class="kpi-l">${esc(label)}</span><span class="kpi-v" ${n != null ? `data-n="${n}" data-f="${f}"` : ''}>${valor}</span>${sub ? `<span class="kpi-s">${sub}</span>` : ''}</button>`;
+export const opt = (v, l, sel) => `<option value="${esc(v)}" ${String(v) === String(sel) ? 'selected' : ''}>${esc(l)}</option>`;
+export const field = (label, input, cls = '') => `<label class="field ${cls}"><span>${label}</span>${input}</label>`;
+export const inp = (name, val = '', attrs = '') => `<input id="f-${name}" name="${name}" value="${esc(val)}" ${attrs}>`;
+export const sel = (name, opts, val, attrs = '') => `<select id="f-${name}" name="${name}" ${attrs}>${opts.map(o => (Array.isArray(o) ? opt(o[0], o[1], val) : opt(o, o, val))).join('')}</select>`;
+export const txt = (name, val = '', attrs = '') => `<textarea id="f-${name}" name="${name}" ${attrs}>${esc(val)}</textarea>`;
+export const statusVenda = v => { const [l, t] = STATUS_VENDA[vendaStatus(v)] || ['—', '']; return chip(l, t); };
 const podeEscrever = () => S.canWrite !== false;
 
 export const barChart = (items, { money = true, h = 180 } = {}) => {
@@ -73,6 +74,9 @@ const funilChart = (uids) => {
   const perdidos = funil(uids).filter(e => ['perdido', 'sem_interesse'].includes(e.id)).reduce((s, e) => s + e.n, 0);
   return `<div class="funil">${f.map(e => `<div class="frow"><span class="fl">${esc(e.nome)}</span><span class="fb"><span style="width:${(e.n / max) * 100}%"></span></span><span class="fn">${num(e.n)}</span></div>`).join('')}</div><p class="muted small">Perdidos ou sem interesse: ${num(perdidos)}</p>`;
 };
+
+const desafioAtivoV = () => { try { return V2.desafioCard ? (S.config.desafios?.lista || []).filter(d => d.ativo !== false && d.inicio <= today() && d.fim >= today()) : []; } catch (e) { return []; } };
+export const embedVideo = url => { if (!url) return null; let m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/); if (m) return { tipo: 'youtube', id: m[1] }; m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/); if (m) return { tipo: 'vimeo', id: m[1] }; return null; };
 
 // ---------- Telas de entrada
 export const loading = (msg = 'Preparando sua jornada…') => `<div class="center-screen boot">${brandBig(true)}<div class="boot-line"><span></span></div><p class="muted small">${esc(msg)}</p></div>`;
@@ -117,6 +121,7 @@ export const boasVindas = () => `<div class="center-screen welcome"><form class=
 export const NAV = () => {
   const n = [
     ['inicio', 'Início', 'home'],
+    ['resumo', 'Resumo da semana', 'chart'],
     ...(!szResumo(S.uid).concluida && szDias().length ? [['semana-zero', 'Semana Zero', 'flag']] : []),
     ['academy', 'Academy', 'book'],
     ['carteira', 'Minha Carteira', 'users'],
@@ -141,7 +146,7 @@ export const shell = content => {
   <aside class="side" id="side">
     <div class="side-brand"><span class="mark">${crown(26)}</span><div><strong>PRIMORIS</strong><small>ACADEMY</small></div></div>
     <nav>${nav.map(([id, l, i]) => `<a href="#${id}" class="${S.view === id ? 'on' : ''}">${ic(i)}<span>${l}</span>${id === 'admin' && pend ? `<em class="badge">${pend}</em>` : ''}</a>`).join('')}</nav>
-    <div class="side-foot"><span class="muted small">${esc(ROLES[role()])}</span><button class="linkbtn small" data-act="sair">Sair</button></div>
+    ${S.installPrompt ? `<button class="install" data-act="instalar">${ic('download', 16)} Instalar app</button>` : ''}<div class="side-foot"><span class="muted small">${esc(ROLES[role()])}</span><button class="linkbtn small" data-act="sair">Sair</button></div>
   </aside>
   <div class="main">
     <header class="top">
@@ -225,9 +230,10 @@ export const inicio = () => {
     linha5 = card('Ranking de VGV', rk.length ? `<ol class="rank">${rk.map((x, i) => `<li><span class="pos ${i < 3 ? 'accent-t' : ''}">${i + 1}</span><button class="linkbtn" data-act="perfil" data-id="${x.u}">${esc(nome(x.u))}</button><span>${brlShort(x.v)} · ${x.n} vendas</span></li>`).join('')}</ol>` : empty('Sem dados', 'Nenhum consultor no escopo.'), `<span class="muted small">${r.nome}</span>`)
       + card('Conversão comercial', (() => { const ag = reun.length, re = realizadas, cts = cont.length; return `<div class="row3"><div><span class="muted small">Contato → reunião</span><strong>${pct(ag, cts)}%</strong></div><div><span class="muted small">Agendada → realizada</span><strong>${pct(re, ag)}%</strong></div><div><span class="muted small">Reunião → venda</span><strong>${pct(vendas, re)}%</strong></div></div>`; })());
   }
+  const dAt = desafioAtivoV(); const desafioHtml = dAt.length ? card('Desafio da semana', dAt.map(d => V2.desafioCard(d, eu ? [S.uid] : uids)).join(''), '<a href="#conquistas" class="link">Ver todos</a>', 'span2') : '';
   const grafico = card('Evolução mensal do VGV validado', barChart(vgvMensal(uids, 6)), '<span class="muted small">últimos 6 meses</span>') + card('Funil da carteira', funilChart(uids));
   const conq = eu ? (() => { const c = conquistasDe(S.uid).filter(x => x.ok); return card('Conquistas', c.length ? `<div class="medals sm">${c.slice(-6).map(x => `<span class="medal on">${ic('medal', 20)}<small>${esc(x.nome)}</small></span>`).join('')}</div>` : empty('Primeira conquista à vista', 'Conclua a Semana Zero para ganhar sua primeira medalha.'), '<a href="#conquistas" class="link">Ver todas</a>', 'span2'); })() : '';
-  return `${filtroBar()}${kpis}<div class="grid2">${linha2}${linha3}${grafico}${linha5}${conq}</div>`;
+  return `${filtroBar()}${kpis}<div class="grid2">${linha2}${linha3}${desafioHtml}${grafico}${linha5}${conq}</div>`;
 };
 const nowISOsafe = () => new Date().toISOString();
 
@@ -292,7 +298,8 @@ const cursoCard = c => { const st = cursoStatus(S.uid, c); return `<button class
 const cursoView = c => {
   const st = cursoStatus(S.uid, c); const aulas = c.aulas || []; const ai = S.sub.aula ?? Math.max(0, aulas.findIndex(a => !prog(S.uid).aulas?.[c.id]?.[a.id])); const a = aulas[ai];
   const feita = id => !!prog(S.uid).aulas?.[c.id]?.[id];
-  const conteudo = a ? `<h3>${esc(a.titulo)}</h3>${a.url ? `<a class="video" href="${esc(a.url)}" target="_blank" rel="noopener">${ic(a.tipo === 'pdf' ? 'file' : 'play', 28)}<span>${a.tipo === 'pdf' ? 'Abrir material em PDF' : 'Assistir à aula'}</span><small class="muted">abre em nova aba</small></a>` : ''}${a.conteudo ? `<div class="prose">${esc(a.conteudo).replace(/\n/g, '<br>')}</div>` : ''}
+  const emb = a && embedVideo(a.url);
+  const conteudo = a ? `<h3>${esc(a.titulo)}</h3>${emb ? `<div class="player"><div id="yt-player" data-video="${esc(emb.id)}" data-tipo="${emb.tipo}" data-curso="${c.id}" data-aula="${a.id}" data-pos="${Number(prog(S.uid).videoPos?.[c.id]?.[a.id] || 0)}">${emb.tipo === 'vimeo' ? `<iframe src="https://player.vimeo.com/video/${esc(emb.id)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${esc(a.titulo)}"></iframe>` : ''}</div></div>${Number(prog(S.uid).videoPos?.[c.id]?.[a.id] || 0) > 5 && emb.tipo === 'youtube' ? `<p class="small muted">Continuando de onde você parou.</p>` : ''}` : ''}${a.url && !emb ? `<a class="video" href="${esc(a.url)}" target="_blank" rel="noopener">${ic(a.tipo === 'pdf' ? 'file' : 'play', 28)}<span>${a.tipo === 'pdf' ? 'Abrir material em PDF' : 'Assistir à aula'}</span><small class="muted">abre em nova aba</small></a>` : ''}${a.conteudo ? `<div class="prose">${esc(a.conteudo).replace(/\n/g, '<br>')}</div>` : ''}
     <div class="row-a">${feita(a.id) ? chip('Aula concluída', 'ok') : `<button class="btn primary" data-act="aula-ok" data-id="${c.id}:${a.id}">Marcar como concluída</button>`}${ai < aulas.length - 1 ? `<button class="btn" data-act="aula" data-id="${ai + 1}">Próxima aula ${ic('arrow', 16)}</button>` : ''}</div>` : empty('Curso sem aulas', 'O administrador ainda não adicionou aulas.');
   const quiz = st.temQuiz ? `<section class="card"><header class="card-h"><h3>Avaliação final</h3><span class="muted small">Nota mínima ${c.notaMin || 70}%</span></header>${st.quiz?.aprovado ? `<p>${chip('Aprovado com ' + st.quiz.nota + '%', 'ok')}</p>` : st.feitas < st.total ? '<p class="muted">Conclua todas as aulas para liberar a avaliação.</p>' : quizForm('curso-quiz', c.id, c.quiz, st.quiz?.nota)}</section>` : '';
   return `<button class="linkbtn" data-act="curso" data-id="">${ic('back', 16)} Voltar</button>` + pageHead(esc(c.titulo), esc(c.descricao || ''), st.concluido ? `<button class="btn accent sm" data-act="cert" data-id="${c.id}">Ver certificado</button>` : `<div class="pill-big">${st.pct}%</div>`)
@@ -323,7 +330,7 @@ export const carteira = () => {
     <label class="check"><input type="checkbox" data-filter="crm.venc" ${f.venc ? 'checked' : ''}> <span>Próxima ação vencida</span></label>
     <div class="seg"><button class="${f.modo === 'kanban' ? 'on' : ''}" data-act="crm-modo" data-id="kanban" aria-label="Kanban">${ic('kanban', 16)}</button><button class="${f.modo === 'lista' ? 'on' : ''}" data-act="crm-modo" data-id="lista" aria-label="Lista">${ic('rows', 16)}</button></div>
   </div>`;
-  const head = pageHead('Minha Carteira', `${num(cs.length)} contatos · ${brlShort(valorTotal)} em projetos estimados`, `<button class="btn sm" data-act="importar">${ic('upload', 16)} Importar</button>${isGestor() ? `<button class="btn sm" data-act="exportar-crm">${ic('download', 16)} Exportar</button>` : ''}<button class="btn accent sm" data-act="novo-contato">${ic('plus', 16)} Novo contato</button>`);
+  const head = pageHead('Minha Carteira', `${num(cs.length)} contatos · ${brlShort(valorTotal)} em projetos estimados`, `<button class="btn sm" data-act="objecoes">${ic('msg', 16)} Objeções</button><button class="btn sm" data-act="importar">${ic('upload', 16)} Importar</button>${isGestor() ? `<button class="btn sm" data-act="exportar-crm">${ic('download', 16)} Exportar</button>` : ''}<button class="btn accent sm" data-act="novo-contato">${ic('plus', 16)} Novo contato</button>`);
   if (!contatosDe(uids).length) return head + bar_ + empty('Nenhum contato ainda', 'Cadastre seu primeiro contato ou importe uma planilha.', '<button class="btn accent" data-act="novo-contato">Cadastrar contato</button>');
   const cardC = c => `<div class="ccard" draggable="true" data-drag="${c.id}" data-act="contato" data-id="${c.id}" tabindex="0"><strong>${esc(c.nome)}</strong><span class="small muted">${esc(fmtPhone(c.telefone))}${c.produto ? ' · ' + esc(c.produto) : ''}</span>${c.valor ? `<span class="small">${brlShort(c.valor)}</span>` : ''}<span class="ctags">${c.temperatura ? chip(c.temperatura, c.temperatura === 'Quente' ? 'accent' : '') : ''}${esfriando(c) ? chip('Esfriando', 'warn') : ''}${c.proximaData && c.proximaData <= today() ? chip('Ação ' + fmtDate(c.proximaData), c.proximaData < today() ? 'bad' : 'warn') : ''}${uids.length > 1 ? `<span class="muted small">${esc(firstName(nome(c.ownerId)))}</span>` : ''}</span></div>`;
   const body = f.modo === 'kanban' ? `<div class="kanban">${ETAPAS.map(e => { const col = cs.filter(c => (c.etapa || 'novo') === e.id); return `<div class="kcol" data-drop="${e.id}"><header><span>${esc(e.nome)}</span><span class="muted small">${col.length} · ${brlShort(col.reduce((s, c) => s + (Number(c.valor) || 0), 0))}</span></header><div class="kbody">${col.map(cardC).join('')}</div></div>`; }).join('')}</div>`
@@ -333,6 +340,7 @@ export const carteira = () => {
 export const contatoForm = (c = {}) => {
   const g = geral();
   return `<form data-form="contato" data-id="${c.id || ''}" class="form-grid">
+  ${!c.id && 'contacts' in navigator && 'select' in (navigator.contacts || {}) ? '<div class="span2"><button type="button" class="btn sm" data-act="picker">' + ic('users', 16) + ' Puxar da agenda do celular</button></div>' : ''}
   ${field('Nome completo *', inp('nome', c.nome, 'required'), 'span2')}
   ${field('Telefone / WhatsApp *', inp('telefone', fmtPhone(c.telefone), 'required inputmode="tel" placeholder="(11) 99999-9999"'))}
   ${field('E-mail', inp('email', c.email, 'type="email"'))}
@@ -360,6 +368,7 @@ export const contatoDetalhe = c => {
   return `<div class="det">
     <div class="det-h"><div><h3>${esc(c.nome)}</h3><p class="muted small">${esc(fmtPhone(c.telefone))} ${c.email ? '· ' + esc(c.email) : ''} ${c.cidade ? '· ' + esc(c.cidade) + '/' + esc(c.uf || '') : ''}</p><p>${chip(etapaNome(c.etapa), 'accent')} ${c.origem ? chip(c.origem) : ''} ${c.produto ? chip(c.produto) : ''} ${c.valor ? chip(brlShort(c.valor)) : ''}</p>${c.ownerId !== S.uid ? `<p class="muted small">Responsável: ${esc(nome(c.ownerId))}</p>` : ''}</div></div>
     ${meu ? `<div class="row-a wrap">
+      <a class="btn sm" href="tel:+${wa}" data-act="ligar" data-id="${c.id}">${ic('phone', 16)} Ligar</a>
       <a class="btn sm" href="https://wa.me/${wa}" target="_blank" rel="noopener" data-act="wa" data-id="${c.id}">${ic('msg', 16)} WhatsApp</a>
       <button class="btn sm" data-act="ativ" data-id="${c.id}">${ic('phone', 16)} Registrar contato</button>
       <button class="btn sm" data-act="nova-reuniao" data-id="${c.id}">${ic('calendar', 16)} Agendar reunião</button>
@@ -367,6 +376,7 @@ export const contatoDetalhe = c => {
       <button class="btn sm" data-act="editar-contato" data-id="${c.id}">Editar</button>
     </div>
     <div class="row-a wrap"><label class="field inline"><span>Mover para</span><select data-act-change="etapa" data-id="${c.id}">${ETAPAS.map(e => opt(e.id, e.nome, c.etapa || 'novo')).join('')}</select></label></div>` : ''}
+    ${meu && V2.modelosPara(c).length ? `<h4>Mensagens prontas</h4><div class="modelos">${V2.modelosPara(c).map((m, i) => `<a class="btn xs" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${encodeURIComponent(V2.preencher(m.texto, c))}" data-act="wa" data-id="${c.id}">${esc(m.titulo)}</a>`).join('')}</div>` : ''}
     ${c.proximaData ? `<p><strong>Próxima ação:</strong> ${esc(c.proximaAcao || '')} · ${fmtDate(c.proximaData)}</p>` : ''}
     ${c.obs ? `<blockquote>${esc(c.obs)}</blockquote>` : ''}
     <h4>Linha do tempo</h4><ul class="timeline">${tl.map(x => `<li><span class="muted small">${fmtDT(x.at)} · ${esc(firstName(nome(x.by)))}</span><span>${esc(x.t)}</span>${x.d ? `<span class="small">${esc(x.d)}</span>` : ''}</li>`).join('')}</ul>
@@ -436,7 +446,7 @@ export const tarefaForm = (x = {}) => {
 export const vendas = () => {
   const tab = S.sub.vTab || 'milhao'; const mm = geral().metaMilhao; const tot = vgvTotal(S.uid); const minhas = vendasDe([S.uid]);
   const valid = vendasValidadas([S.uid]); const ticket = valid.length ? tot / valid.length : 0; const pend = vgv([S.uid], null, 'pendente');
-  const tabs = `<div class="tabs">${[['milhao', 'Meu Primeiro Milhão'], ['minhas', 'Minhas vendas'], ['simulador', 'Simulador'], ...(isGestor() ? [['fila', 'Fila de validação']] : [])].map(([v, l]) => `<button class="${tab === v ? 'on' : ''}" data-act="v-tab" data-id="${v}">${l}</button>`).join('')}</div>`;
+  const tabs = `<div class="tabs">${[['milhao', 'Meu Primeiro Milhão'], ['minhas', 'Minhas vendas'], ['comissoes', 'Comissões'], ['simulador', 'Simulador'], ...(isGestor() ? [['fila', 'Fila de validação']] : [])].map(([v, l]) => `<button class="${tab === v ? 'on' : ''}" data-act="v-tab" data-id="${v}">${l}</button>`).join('')}</div>`;
   let body = '';
   if (tab === 'milhao') {
     const marcos = [100000, 250000, 500000, 750000, 1000000].filter(x => x <= mm);
@@ -459,11 +469,13 @@ export const vendas = () => {
       ${field('Conversão prospecção → reunião (%)', inp('conv2', pr, 'type="number" min="1" max="100" data-sim'))}
       </div><p class="muted small">As conversões vêm dos seus números reais quando existem; ajuste para testar cenários.</p></form>
       <section class="card sim-out" id="sim-out"></section></div>`;
+  } else if (tab === 'comissoes') {
+    body = V2.comissoes();
   } else if (tab === 'fila') {
     const vis = isAdmin() ? list(S.vendas) : list(S.vendas).filter(v => minhasEquipes().includes(equipeDe(v.ownerId)));
     const fila = vis.filter(v => ['registrada', 'pre_aprovada'].includes(vendaStatus(v))).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
     const outras = vis.filter(v => !['registrada', 'pre_aprovada'].includes(vendaStatus(v))).sort((a, b) => (S.validacoes[b.id]?.at || '').localeCompare(S.validacoes[a.id]?.at || '')).slice(0, 30);
-    const row = v => `<tr><td>${fmtDate(v.data)}</td><td>${esc(nome(v.ownerId))}</td><td>${esc(S.contatos[v.contatoId]?.nome || v.clienteNome || '')}</td><td>${esc(v.produto)} · ${esc(v.administradora || '')}</td><td>${esc(v.proposta || '')}${v.grupo ? ' · G' + esc(v.grupo) + '/C' + esc(v.cota || '') : ''}</td><td class="r">${brl(v.valor)}</td><td>${statusVenda(v)}${daysBetween(dayOf(v.createdAt), today()) > 3 && ['registrada', 'pre_aprovada'].includes(vendaStatus(v)) ? chip('Parada há ' + daysBetween(dayOf(v.createdAt), today()) + ' dias', 'bad') : ''}</td><td class="acts">${['registrada', 'pre_aprovada'].includes(vendaStatus(v)) ? `${isAdmin() ? `<button class="btn xs accent" data-act="validar" data-id="${v.id}">Validar</button><button class="btn xs" data-act="devolver" data-id="${v.id}">Devolver</button><button class="btn xs danger" data-act="reprovar" data-id="${v.id}">Reprovar</button>` : !v.preAprovadaPor ? `<button class="btn xs accent" data-act="preaprovar" data-id="${v.id}">Pré-aprovar</button>` : ''}` : vendaStatus(v) === 'validada' && isAdmin() ? `<button class="btn xs danger" data-act="cancelar-venda" data-id="${v.id}">Cancelar</button>` : ''}<button class="btn xs" data-act="hist-venda" data-id="${v.id}">Histórico</button></td></tr>`;
+    const row = v => `<tr><td>${fmtDate(v.data)}</td><td>${esc(nome(v.ownerId))}</td><td>${esc(S.contatos[v.contatoId]?.nome || v.clienteNome || '')}</td><td>${esc(v.produto)} · ${esc(v.administradora || '')}</td><td>${esc(v.proposta || '')}${v.grupo ? ' · G' + esc(v.grupo) + '/C' + esc(v.cota || '') : ''}${v.comprovante ? ` <button class="btn xs" data-act="ver-arquivo" data-id="${esc(v.comprovante)}">Comprovante</button>` : ''}</td><td class="r">${brl(v.valor)}</td><td>${statusVenda(v)}${daysBetween(dayOf(v.createdAt), today()) > 3 && ['registrada', 'pre_aprovada'].includes(vendaStatus(v)) ? chip('Parada há ' + daysBetween(dayOf(v.createdAt), today()) + ' dias', 'bad') : ''}</td><td class="acts">${['registrada', 'pre_aprovada'].includes(vendaStatus(v)) ? `${isAdmin() ? `<button class="btn xs accent" data-act="validar" data-id="${v.id}">Validar</button><button class="btn xs" data-act="devolver" data-id="${v.id}">Devolver</button><button class="btn xs danger" data-act="reprovar" data-id="${v.id}">Reprovar</button>` : !v.preAprovadaPor ? `<button class="btn xs accent" data-act="preaprovar" data-id="${v.id}">Pré-aprovar</button>` : ''}` : vendaStatus(v) === 'validada' && isAdmin() ? `<button class="btn xs danger" data-act="cancelar-venda" data-id="${v.id}">Cancelar</button>` : ''}<button class="btn xs" data-act="hist-venda" data-id="${v.id}">Histórico</button></td></tr>`;
     body = `<section class="card tablewrap"><header class="card-h"><h3>Aguardando validação</h3><span class="muted small">${fila.length} vendas · ${brl(fila.reduce((s, v) => s + Number(v.valor || 0), 0))}</span></header>${fila.length ? `<table class="tbl"><thead><tr><th>Data</th><th>Consultor</th><th>Cliente</th><th>Produto</th><th>Proposta</th><th class="r">Valor</th><th>Status</th><th></th></tr></thead><tbody>${fila.map(row).join('')}</tbody></table>` : empty('Fila vazia', 'Nenhuma venda aguardando validação.')}</section>
       <section class="card tablewrap"><header class="card-h"><h3>Decididas recentemente</h3></header>${outras.length ? `<table class="tbl"><tbody>${outras.map(row).join('')}</tbody></table>` : '<p class="muted">Nada ainda.</p>'}</section>
       ${!isAdmin() ? '<p class="muted small">Como gestor, você pré-aprova. A validação oficial, que conta no VGV, é feita pela administração.</p>' : ''}`;
@@ -494,6 +506,7 @@ export const vendaForm = (v = {}, contatoId = '') => {
   ${field('Grupo', inp('grupo', v.grupo))}
   ${field('Cota', inp('cota', v.cota))}
   ${field('Observações', txt('obs', v.obs, 'rows="2"'), 'span2')}
+  ${!v.id ? field('Comprovante (PDF ou foto, opcional)', '<input type="file" id="f-comprovante" name="comprovante" accept="application/pdf,image/*">', 'span2') : ''}
   <p class="muted small span2">A venda entra como “aguardando validação” e só soma no VGV oficial depois de aprovada pela administração.</p>
   <div class="span2 row-a"><button class="btn accent">${v.id ? 'Reenviar para validação' : 'Registrar venda'}</button></div></form>`;
 };
@@ -518,7 +531,7 @@ export const conquistas = () => {
   const c = conquistasDe(S.uid); const r = periodo('mes');
   const rk = ativos().map(m => ({ u: m.id, v: vgv([m.id], r) })).filter(x => S.config.geral?.rankingPublico || isGestor() || minhasEquipes().includes(equipeDe(x.u)) || equipeDe(x.u) === equipeDe(S.uid)).sort((a, b) => b.v - a.v);
   const pos = rk.findIndex(x => x.u === S.uid) + 1;
-  return pageHead('Conquistas', `${c.filter(x => x.ok).length} de ${c.length} medalhas`) + `<div class="medals">${c.map(x => `<div class="medal ${x.ok ? 'on' : ''}">${ic(x.ok ? 'medal' : 'lock', 28)}<strong>${esc(x.nome)}</strong></div>`).join('')}</div>`
+  const ds = V2 && desafioAtivoV(); return pageHead('Conquistas', `${c.filter(x => x.ok).length} de ${c.length} medalhas`) + (ds.length ? `<section class="card"><header class="card-h"><h3>Desafios da semana</h3></header>${ds.map(d => V2.desafioCard(d, ativos().filter(m => isGestor() || m.equipeId === equipeDe(S.uid)).map(m => m.id))).join('')}</section>` : '') + `<div class="medals">${c.map(x => `<div class="medal ${x.ok ? 'on' : ''}">${ic(x.ok ? 'medal' : 'lock', 28)}<strong>${esc(x.nome)}</strong></div>`).join('')}</div>`
     + `<div class="grid2">${card('Ranking do mês (VGV validado)', `${pos ? `<p>Sua posição: <strong class="accent-t">${pos}º</strong></p>` : ''}<ol class="rank">${rk.slice(0, 10).map((x, i) => `<li class="${x.u === S.uid ? 'me' : ''}"><span class="pos ${i < 3 ? 'accent-t' : ''}">${i + 1}</span><span>${esc(nome(x.u))}</span><span>${brlShort(x.v)}</span></li>`).join('')}</ol>`)}
     ${card('Mural da equipe', muralHtml(), '<button class="btn xs" data-act="mural-post">Publicar</button>')}</div>`;
 };
@@ -586,10 +599,10 @@ export const relatorioDados = (tipo) => {
 };
 const etapaIdx_ = id => ETAPAS.findIndex(e => e.id === id);
 export const relatorios = () => {
-  const tipo = S.sub.rel || 'vgv'; const rows = relatorioDados(tipo);
+  const tipo = S.sub.rel || 'vgv'; const rows = tipo === 'diagnostico' ? [[]] : relatorioDados(tipo);
   return pageHead('Relatórios', 'Respeitam seu escopo de acesso. Exportações ficam registradas na auditoria.', `<button class="btn sm" data-act="exportar-rel">${ic('download', 16)} Exportar CSV</button>`)
-    + `<div class="tabs scroll">${Object.entries(RELATORIOS).map(([v, l]) => `<button class="${tipo === v ? 'on' : ''}" data-act="rel" data-id="${v}">${l}</button>`).join('')}</div>` + filtroBar()
-    + `<div class="card tablewrap"><table class="tbl"><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${rows[0].length}" class="muted">Sem dados no escopo e período.</td></tr>`}</tbody></table></div>`;
+    + `<div class="tabs scroll">${[['diagnostico', 'Diagnóstico do funil'], ...Object.entries(RELATORIOS)].map(([v, l]) => `<button class="${tipo === v ? 'on' : ''}" data-act="rel" data-id="${v}">${l}</button>`).join('')}</div>` + filtroBar()
+    + (tipo === 'diagnostico' ? V2.diagnosticoView() : `<div class="card tablewrap"><table class="tbl"><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${rows[0].length}" class="muted">Sem dados no escopo e período.</td></tr>`}</tbody></table></div>`);
 };
 
 // ---------- ADMINISTRAÇÃO
@@ -597,7 +610,7 @@ export const admin = () => {
   const tab = S.sub.adTab || 'usuarios';
   const nSol = Object.keys(S.solicitacoes).length, nProg = list(S.progressoes).filter(p => p.status === 'solicitada').length;
   const docsPend = ativos().reduce((s, m) => s + Object.values(prog(m.id).docs || {}).filter(d => !d.conferido).length, 0);
-  const tabs = [['usuarios', `Usuários${nSol ? ` (${nSol})` : ''}`], ['equipes', 'Equipes'], ['progressoes', `Carreira${nProg + docsPend ? ` (${nProg + docsPend})` : ''}`], ['cursos', 'Treinamentos'], ['semanazero', 'Semana Zero'], ['parametros', 'Parâmetros'], ['auditoria', 'Auditoria'], ['ajuda', 'Como convidar']];
+  const tabs = [['usuarios', `Usuários${nSol ? ` (${nSol})` : ''}`], ['equipes', 'Equipes'], ['progressoes', `Carreira${nProg + docsPend ? ` (${nProg + docsPend})` : ''}`], ['cursos', 'Treinamentos'], ['semanazero', 'Semana Zero'], ['comissoes', 'Comissões'], ['desafios', 'Desafios'], ['mensagens', 'Mensagens'], ['parametros', 'Parâmetros'], ['backup', 'Backup'], ['auditoria', 'Auditoria'], ['ajuda', 'Ajuda']];
   let body = '';
   if (tab === 'usuarios') {
     const sols = list(S.solicitacoes).sort((a, b) => (a.at || '').localeCompare(b.at || ''));
@@ -609,7 +622,7 @@ export const admin = () => {
     const sols = list(S.progressoes).filter(p => p.status === 'solicitada');
     const docs = ativos().flatMap(m => Object.entries(prog(m.id).docs || {}).filter(([, d]) => !d.conferido).map(([k, d]) => ({ uid: m.id, k, d })));
     body = `<section class="card"><header class="card-h"><h3>Solicitações de progressão</h3></header>${sols.length ? `<table class="tbl"><tbody>${sols.map(p => { const pn = proxNivel(p.uid); return `<tr><td><strong>${esc(nome(p.uid))}</strong><div class="small muted">${esc(nivelNome(p.de))} → ${esc(nivelNome(p.para))} · ${fmtDT(p.at)}</div>${p.gestorRec ? `<div class="small">Gestor: ${esc(p.gestorRec)}</div>` : ''}</td><td class="small">${pn ? pn.reqs.map(q => `${q.ok ? '✓' : '✗'} ${esc(q.label)}`).join('<br>') : ''}</td><td class="acts"><button class="btn xs accent" data-act="aprovar-nivel" data-id="${p.id}">Aprovar</button><button class="btn xs" data-act="devolver-nivel" data-id="${p.id}">Devolver</button></td></tr>`; }).join('')}</tbody></table>` : '<p class="muted">Nenhuma solicitação pendente.</p>'}</section>
-      <section class="card"><header class="card-h"><h3>Documentos para conferência</h3></header>${docs.length ? `<table class="tbl"><tbody>${docs.map(x => `<tr><td><strong>${esc(nome(x.uid))}</strong><div class="small muted">${esc(x.d.label || x.k)} · enviado ${fmtDT(x.d.at)}</div></td><td>${esc(x.d.valor || '')}</td><td class="acts"><button class="btn xs accent" data-act="conferir-doc" data-id="${x.uid}:${x.k}">Conferido</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nenhum documento pendente.</p>'}</section>
+      <section class="card"><header class="card-h"><h3>Documentos para conferência</h3></header>${docs.length ? `<table class="tbl"><tbody>${docs.map(x => `<tr><td><strong>${esc(nome(x.uid))}</strong><div class="small muted">${esc(x.d.label || x.k)} · enviado ${fmtDT(x.d.at)}</div></td><td>${esc(x.d.valor || '')}${x.d.arquivo ? ` <button class="btn xs" data-act="ver-arquivo" data-id="${esc(x.d.arquivo)}">Ver arquivo</button>` : ''}</td><td class="acts"><button class="btn xs accent" data-act="conferir-doc" data-id="${x.uid}:${x.k}">Conferido</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nenhum documento pendente.</p>'}</section>
       <section class="card"><header class="card-h"><h3>Níveis e requisitos</h3><button class="btn xs" data-act="editar-carreira">Editar requisitos</button></header><ul class="lst">${niveisCfg().map((n, i) => `<li><span><strong>${String(i + 1).padStart(2, '0')} ${esc(n.nome)}</strong></span><span class="small muted">${(n.requisitos || []).map(r => esc(r.label)).join(' · ') || 'Critérios em definição'}</span></li>`).join('')}</ul></section>`;
   } else if (tab === 'cursos') {
     const escolas = S.config.academy?.escolas || [];
@@ -630,6 +643,10 @@ export const admin = () => {
       ${field('Administradoras parceiras (uma por linha)', txt('administradoras', g.administradoras.join('\n'), 'rows="4"'))}
       ${field('Frases do cabeçalho (uma por linha)', txt('frases', g.frases.join('\n'), 'rows="4"'))}
       </div><div class="row-a"><button class="btn accent">Salvar parâmetros</button></div></form>`;
+  } else if (tab === 'comissoes') { body = V2.comissoesAdmin();
+  } else if (tab === 'desafios') { body = V2.desafiosAdmin();
+  } else if (tab === 'mensagens') { body = V2.mensagensAdmin();
+  } else if (tab === 'backup') { body = V2.backupAdmin();
   } else if (tab === 'auditoria') {
     const a = list(S.audit).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 200);
     body = `<section class="card tablewrap"><table class="tbl"><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Alvo</th></tr></thead><tbody>${a.map(x => `<tr><td>${fmtDT(x.at)}</td><td>${esc(nome(x.by))}</td><td>${esc(x.acao)}</td><td>${esc(x.alvo)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem registros.</td></tr>'}</tbody></table></section>`;
@@ -638,7 +655,9 @@ export const admin = () => {
       <li>Envie o endereço da plataforma para a pessoa: <strong>${esc(location.origin + location.pathname)}</strong></li>
       <li>Ela clica em <strong>Entrar com Google</strong> e preenche a solicitação de acesso.</li>
       <li>A solicitação aparece na aba Usuários. Clique em <strong>Liberar acesso</strong> e defina perfil (Consultor, Gestor ou Administrador), nível, equipe e gestor.</li></ol>
-      <p class="muted">As permissões valem no servidor: um consultor só lê a própria carteira; o gestor, a da equipe; administradores, tudo. Para retirar alguém, marque o usuário como Bloqueado ou Desativado: o acesso aos dados é cortado na hora.</p></section>`;
+      <p class="muted">As permissões valem no servidor: um consultor só lê a própria carteira; o gestor, a da equipe; administradores, tudo. Para retirar alguém, marque o usuário como Bloqueado ou Desativado: o acesso aos dados é cortado na hora.</p>
+      <h3>Instalar no celular</h3><p>Android (Chrome): abra o endereço e toque em <strong>Instalar app</strong> no menu lateral ou em ⋮ → Instalar app. iPhone (Safari): toque em Compartilhar → <strong>Adicionar à Tela de Início</strong>. Depois, ative as notificações pelo sino.</p>
+      <h3>Domínio próprio (ex.: academy.primoris.com.br)</h3><ol><li>Compre o domínio (Registro.br para .com.br).</li><li>No painel do domínio, crie um registro <code>CNAME</code> de <code>academy</code> apontando para <code>equipeprimoris-netizen.github.io</code>.</li><li>Me avise: eu configuro o GitHub Pages, o Supabase e o Google com o novo endereço.</li></ol></section>`;
   }
   return pageHead('Administração', 'Configure a operação sem depender de programação.') + `<div class="tabs scroll">${tabs.map(([v, l]) => `<button class="${tab === v ? 'on' : ''}" data-act="ad-tab" data-id="${v}">${l}</button>`).join('')}</div>` + body;
 };
@@ -697,4 +716,5 @@ export const carreiraForm = () => {
   const tipos = [['semanaZero', 'Semana Zero concluída'], ['vgv', 'VGV validado acumulado (R$)'], ['contatos', 'Contatos na carteira'], ['prospeccoes', 'Prospecções registradas'], ['vendas', 'Vendas validadas'], ['cursosObrigatorios', 'Cursos obrigatórios concluídos'], ['curso', 'Curso específico (id)'], ['tempo', 'Tempo de casa (meses)'], ['equipe', 'Consultores na equipe'], ['documento', 'Documento enviado e conferido'], ['manual', 'Aprovação manual']];
   return `<form data-form="carreira"><p class="muted small">Uma linha por requisito no formato: tipo | valor | descrição. Tipos: ${tipos.map(t => `<code>${t[0]}</code> (${t[1]})`).join(', ')}. Não preencha critérios que a diretoria ainda não definiu.</p>${niveis.map((n, i) => `<fieldset class="szedit"><legend>Nível ${i + 1}</legend><div class="form-grid">${field('Nome', inp('n' + i, n.nome))}${field('Requisitos para chegar a este nível', txt('r' + i, (n.requisitos || []).map(r => [r.tipo, r.valor ?? '', r.label].join(' | ')).join('\n'), 'rows="4"'), 'span2')}</div></fieldset>`).join('')}<div class="row-a"><button class="btn accent">Salvar carreira</button></div></form>`;
 };
+export const pushBox = st => st === 'indisponivel' ? '' : st === 'ativo' ? `<p class="small muted">${ic('check', 14)} Notificações ativas neste aparelho.</p>` : st === 'bloqueado' ? `<div class="notice">As notificações estão bloqueadas neste navegador. Libere nas configurações do site (cadeado ao lado do endereço).</div>` : `<div class="notice">Receba avisos de reuniões, follow-ups e vendas validadas mesmo com o app fechado. <button class="btn xs accent" data-act="ativar-push">Ativar notificações</button></div>`;
 export const notifsHtml = () => { const ns = list(S.notifs).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 30); return ns.length ? `<div class="row-a"><button class="btn xs" data-act="notifs-lidas">Marcar todas como lidas</button></div><ul class="notifs">${ns.map(n => `<li class="${n.lida ? '' : 'new'}"><button class="linkbtn" data-act="notif" data-id="${n.id}"><span>${esc(n.texto)}</span><span class="muted small">${fmtDT(n.at)}</span></button></li>`).join('')}</ul>` : '<p class="muted">Nenhuma notificação.</p>'; };

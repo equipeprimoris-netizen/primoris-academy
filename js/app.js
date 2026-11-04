@@ -2,6 +2,7 @@
 import * as C from './core.js';
 import * as V from './views.js';
 import * as P from './platform.js';
+import * as V2 from './views2.js';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -43,6 +44,7 @@ const schedule = () => { if (rq) return; rq = true; requestAnimationFrame(() => 
 function editing() { const a = document.activeElement; return a && $app.contains(a) && a.matches('input:not([type=checkbox]):not([type=radio]),textarea,select') && !a.dataset.filter; }
 function render(force = false) {
   if (!force && editing()) { deferred = true; return; }
+  if (!force && S.view === 'academy' && document.querySelector('.player iframe')) { deferred = true; return; }
   deferred = false;
   const y = window.scrollY;
   $app.innerHTML = screen();
@@ -60,7 +62,7 @@ function screen() {
   if ((m.status || 'ativo') !== 'ativo') return V.bloqueado();
   if (!S.dataReady) return V.loading('Sincronizando seus dados…');
   if (!prog(S.uid).welcomeDone && role() === 'consultor') return V.boasVindas();
-  const views = { inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
+  const views = { resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
   let v = S.view;
   if (['equipe', 'relatorios'].includes(v) && !isGestor()) v = 'inicio';
   if (v === 'admin' && !isAdmin()) v = 'inicio';
@@ -75,7 +77,17 @@ function animarEntrada() {
   const step = t => { const k = Math.min(1, (t - t0) / dur); const e = 1 - Math.pow(1 - k, 3); els.forEach(el => { if (el.isConnected) el.textContent = fmt(Number(el.dataset.n) * e, el.dataset.f); }); if (k < 1) requestAnimationFrame(step); };
   if (els.length) requestAnimationFrame(step);
 }
+let ytApi = null, ytTimer = null, ytPlayer = null;
+function carregarYT() { if (ytApi) return ytApi; ytApi = new Promise(res => { window.onYouTubeIframeAPIReady = () => res(window.YT); const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(sc); }); return ytApi; }
+function montarVideo() {
+  const el = document.getElementById('yt-player'); clearInterval(ytTimer);
+  if (!el || el.dataset.tipo !== 'youtube' || el.dataset.ok) return; el.dataset.ok = '1';
+  const { video, curso, aula, pos } = el.dataset; let ultimo = Number(pos) || 0;
+  const salvar = (t, dur) => { if (Math.abs(t - ultimo) < 10 && !(dur && t / dur > 0.9)) return; ultimo = t; const patch = { videoPos: { [curso]: { [aula]: Math.floor(t) } } }; if (dur && t / dur >= 0.9 && !prog(S.uid).aulas?.[curso]?.[aula]) patch.aulas = { [curso]: { [aula]: nowISO() } }; merge('progresso/' + S.uid, patch, S.progresso[S.uid]).catch(() => {}); };
+  carregarYT().then(YT => { if (!el.isConnected) return; ytPlayer = new YT.Player(el, { videoId: video, playerVars: { start: Math.max(0, Math.floor(ultimo) - 3), rel: 0, modestbranding: 1, playsinline: 1 }, events: { onStateChange: ev => { if (ev.data === YT.PlayerState.ENDED) salvar(ytPlayer.getDuration(), ytPlayer.getDuration()); } } }); ytTimer = setInterval(() => { if (!document.getElementById(ytPlayer?.getIframe?.()?.id || '') && !ytPlayer?.getIframe?.()?.isConnected) { clearInterval(ytTimer); return; } try { if (ytPlayer.getPlayerState?.() === 1) salvar(ytPlayer.getCurrentTime(), ytPlayer.getDuration()); } catch (e) { /* */ } }, 5000); });
+}
 function afterRender() {
+  montarVideo();
   const sim = document.getElementById('sim'); if (sim) document.getElementById('sim-out').innerHTML = V.simCalc(Object.fromEntries(new FormData(sim)));
   if (S.focusFilter) { const el = document.querySelector(`[data-filter="${S.focusFilter}"]`); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) { /* */ } } S.focusFilter = null; }
 }
@@ -128,6 +140,7 @@ function startData() {
     track('d:prog', db.collection('progressoes'), s => { S.progressoes = toMap(s); });
   }
   track('d:notifs', db.collection('notifs').where('to', '==', uid), s => { S.notifs = toMap(s); });
+  track('d:pagamentos', mine ? db.collection('pagamentos').where('ownerId', '==', uid) : db.collection('pagamentos'), s => { S.pagamentos = toMap(s); });
   if (r === 'admin' || r === 'superadmin') sub('d:audit', db.collection('audit').orderBy('at', 'desc').limit(200), s => { S.audit = toMap(s); });
   setTimeout(() => { if (!S.dataReady) { S.dataReady = true; S.animNext = true; schedule(); } }, 2500);
 }
@@ -146,7 +159,7 @@ async function boot() {
   if (!S.uid) { S.fatal = 'Entre na sua conta Claude para acessar a Primoris Academy.'; return render(true); }
   S.owner = !!owner; S.editor = !!editor; S.canWrite = cw !== false; S.profile = profile;
   S.ready = true;
-  ['geral', 'semanaZero', 'carreira', 'academy'].forEach(k => sub('cfg:' + k, db.doc('config/' + k), d => { S.config[k] = d.exists ? d.data() : null; }));
+  ['geral', 'semanaZero', 'carreira', 'academy', 'comissoes', 'desafios', 'mensagens'].forEach(k => sub('cfg:' + k, db.doc('config/' + k), d => { S.config[k] = d.exists ? d.data() : null; }));
   sub('equipes', db.collection('equipes'), s => { S.equipes = toMap(s); });
   sub('solicitacoes', db.collection('solicitacoes'), s => { S.solicitacoes = toMap(s); });
   sub('members', db.collection('members'), async s => {
@@ -184,7 +197,17 @@ const registrarAtividade = async (c, tipo, resultado, texto = '') => {
   const patch = { ultimaInteracao: nowISO(), updatedAt: nowISO() };
   if ((c.etapa || 'novo') === 'novo' && C.PROSPECT_TIPOS.includes(tipo)) { patch.etapa = 'abordagem'; patch.historico = hist(c.historico, { de: 'novo', para: 'abordagem', at: nowISO(), by: S.uid }); }
   await upd('contatos/' + c.id, patch);
+  celebrar();
 };
+async function celebrar() {
+  try {
+    const t = today(); const p = prog(S.uid); const meta = C.metasDe(S.uid).prospeccoes; const n = C.prospeccoes([S.uid], { from: t, to: t }).length;
+    const patch = {};
+    if (n >= meta && meta > 0 && p.muralMeta !== t) { patch.muralMeta = t; await add('feedbacks', { tipo: 'mural', de: S.uid, texto: `${C.firstName(nome(S.uid))} bateu a meta de ${meta} prospecções hoje!`, equipeId: C.equipeDe(S.uid), auto: true, at: nowISO() }); toast(`Meta do dia batida: ${n} prospecções!`, 'ok'); }
+    for (const d of C.desafioAtivo()) { if (C.desafioProgresso(S.uid, d).ok && !p.desafiosOk?.[d.id]) { patch.desafiosOk = { ...(patch.desafiosOk || {}), [d.id]: nowISO() }; await add('feedbacks', { tipo: 'mural', de: S.uid, texto: `${C.firstName(nome(S.uid))} cumpriu o desafio “${d.titulo}”!`, equipeId: C.equipeDe(S.uid), auto: true, at: nowISO() }); toast('Desafio cumprido: ' + d.titulo, 'ok'); } }
+    if (Object.keys(patch).length) await merge('progresso/' + S.uid, patch, S.progresso[S.uid]);
+  } catch (e) { /* comemoração é opcional */ }
+}
 const salvarDupIdx = (c, id) => c.telNorm && put('dupidx/' + c.telNorm, { ownerId: c.ownerId, contatoId: id, at: nowISO() }).catch(() => {});
 const gestoresDe = uid => { const g = C.gestorDe(uid); return g && g !== uid ? [g] : []; };
 const admins = () => list(S.members).filter(m => ['admin', 'superadmin'].includes(m.role) && (m.status || 'ativo') === 'ativo').map(m => m.id);
@@ -196,13 +219,29 @@ async function baixar(filename, data, tipo = 'text/csv') {
 
 // ---------- Cliques
 const ACT = {
+  ligar: id => { setTimeout(() => ACT.ativ(id), 1200); },
+  picker: async () => { try { const [c] = await navigator.contacts.select(['name', 'tel', 'email'], { multiple: false }); if (!c) return; const f = $modal.querySelector('form[data-form="contato"]'); if (c.name?.[0]) f.nome.value = c.name[0]; if (c.tel?.[0]) f.telefone.value = c.tel[0]; if (c.email?.[0]) f.email.value = c.email[0]; } catch (e) { toast('Não foi possível abrir a agenda do celular.', 'warn'); } },
+  objecoes: () => modal('Objeções e respostas', V2.objecoesView(), { wide: true }),
+  copiar: (_, el) => navigator.clipboard?.writeText(el.dataset.txt).then(() => toast('Copiado', 'ok')).catch(() => toast('Selecione e copie o texto.', 'warn')),
+  'ativar-push': async () => { try { const st = await P.ativarPush(); toast(st === 'ativo' ? 'Notificações ativadas neste aparelho.' : 'As notificações foram bloqueadas no navegador.', st === 'ativo' ? 'ok' : 'warn'); } catch (e) { toast('Não foi possível ativar as notificações: ' + (e.message || e), 'bad'); } if (M.refresh) { const b = $modal.querySelector('.modal-b'); if (b) b.innerHTML = M.refresh(); } },
+  instalar: async () => { const p = S.installPrompt; if (!p) return; p.prompt(); await p.userChoice.catch(() => {}); S.installPrompt = null; render(true); },
+  'exportar-comissoes': mk => { const l = C.comissoesDoMes(isAdmin() ? C.ativos().map(m => m.id) : [S.uid], mk); audit('Exportação de comissões', mk); baixar(`comissoes-${mk}.csv`, C.toCSV([['Consultor', 'Validada em', 'Cliente', 'Produto', 'Administradora', 'Carta de crédito', '%', 'Comissão'], ...l.map(v => [nome(v.ownerId), C.fmtDate(S.validacoes[v.id]?.at), S.contatos[v.contatoId]?.nome || v.clienteNome || '', v.produto, v.administradora || '', C.brl(v.valor), v.com.pct, C.brl(v.com.valor)])])); },
+  'marcar-pago': (id, el) => { const [uid, mk] = id.split('_'); run(() => put('pagamentos/' + id, { ownerId: uid, mes: mk, valor: Number(el.dataset.valor) || 0, pagoEm: today(), by: S.uid, at: nowISO() }), 'Pagamento registrado').then(() => { notify(uid, `Sua comissão de ${C.monthLabel(mk)} (${C.brl(Number(el.dataset.valor) || 0)}) foi paga.`, 'vendas'); audit('Comissão paga', `${nome(uid)} · ${mk}`); }); },
+  'desfazer-pagamento': id => run(() => del('pagamentos/' + id), 'Pagamento desfeito').then(() => audit('Pagamento desfeito', id)),
+  'novo-desafio': () => modal('Novo desafio', V2.desafioForm()),
+  'editar-desafio': id => modal('Editar desafio', V2.desafioForm((S.config.desafios?.lista || []).find(d => d.id === id))),
+  'excluir-desafio': async id => { if (await confirmar('Excluir desafio', 'O desafio sai da tela de todos.', 'Excluir')) run(() => put('config/desafios', { lista: (S.config.desafios?.lista || []).filter(d => d.id !== id) }), 'Desafio excluído'); },
+  'atribuir-curso': id => { const [eq, cid] = id.split(':'); const c = S.cursos[cid]; const ids = C.membrosDaEquipe([eq]).filter(u => !C.cursoStatus(u, c).concluido); run(async () => { for (const u of ids) { await add('tarefas', { titulo: 'Concluir o treinamento: ' + c.titulo, descricao: 'Atribuído pelo diagnóstico do funil.', prazo: addDays(today(), 7), prioridade: 'alta', ownerId: u, equipeId: eq, status: 'aberta', createdBy: S.uid, createdAt: nowISO() }); notify(u, `Novo treinamento para você: ${c.titulo}`, 'academy'); } }, `Treinamento atribuído a ${ids.length} consultor(es)`); },
+  'backup-json': () => { const cols = ['members', 'equipes', 'contatos', 'atividades', 'reunioes', 'vendas', 'validacoes', 'tarefas', 'progresso', 'progressoes', 'feedbacks', 'cursos', 'pagamentos']; const out = { geradoEm: nowISO(), config: S.config }; cols.forEach(c => { out[c] = S[c]; }); audit('Backup completo', ''); baixar(`primoris-backup-${today()}.json`, JSON.stringify(out, null, 1), 'application/json'); },
+  'backup-csv': c => { const rows = c === 'contatos' ? [['Nome', 'Telefone', 'E-mail', 'Cidade', 'UF', 'Origem', 'Produto', 'Valor', 'Etapa', 'Responsável', 'Cadastro'], ...list(S.contatos).filter(x => !x.deletedAt).map(x => [x.nome, C.fmtPhone(x.telefone), x.email, x.cidade, x.uf, x.origem, x.produto, x.valor, C.etapaNome(x.etapa), nome(x.ownerId), C.fmtDate(x.createdAt)])] : c === 'vendas' ? [['Data', 'Consultor', 'Cliente', 'Produto', 'Administradora', 'Valor', 'Status', 'Proposta'], ...list(S.vendas).map(v => [C.fmtDate(v.data), nome(v.ownerId), S.contatos[v.contatoId]?.nome || v.clienteNome || '', v.produto, v.administradora, v.valor, C.STATUS_VENDA[C.vendaStatus(v)]?.[0], v.proposta])] : [['Nome', 'E-mail', 'Telefone', 'Perfil', 'Nível', 'Equipe', 'Entrada', 'Status'], ...list(S.members).map(m => [m.nome, m.email, C.fmtPhone(m.telefone), C.ROLES[m.role], C.nivelNome(m.nivel), S.equipes[m.equipeId]?.nome || '', C.fmtDate(m.dataEntrada), m.status || 'ativo'])]; audit('Exportação ' + c, ''); baixar(`${c}-${today()}.csv`, C.toCSV(rows)); },
+  'ver-arquivo': async path => { const w = window.open('', '_blank'); try { const u = await P.linkArquivo(path); if (w) w.location = u; else location.href = u; } catch (e) { if (w) w.close(); toast('Não foi possível abrir o arquivo.', 'bad'); } },
   'google-login': async (_, el) => { el.disabled = true; el.querySelector('span').textContent = 'Abrindo o Google…'; const { error } = await P.entrarComGoogle(); if (error) { el.disabled = false; toast('Não foi possível abrir o login do Google. ' + error.message, 'bad'); } },
   sair: async () => { if (await confirmar('Sair', 'Deseja sair da Primoris Academy neste dispositivo?', 'Sair')) P.sair(); },
   go: id => { location.hash = id; },
   menu: () => document.getElementById('side')?.classList.toggle('open'),
   novo: () => modal('Novo registro', `<div class="quick">${[['novo-contato', 'users', 'Novo contato'], ['ativ-rapida', 'phone', 'Registrar prospecção'], ['nova-reuniao', 'calendar', 'Agendar reunião'], ['nova-venda', 'coins', 'Registrar venda'], ['nova-tarefa', 'checksq', 'Nova tarefa']].map(([a, i, l]) => `<button class="quick-b" data-act="${a}">${V.ic(i, 22)}<span>${l}</span></button>`).join('')}</div>`),
   'ativ-rapida': () => { const cs = C.contatosDe([S.uid]).sort((a, b) => a.nome.localeCompare(b.nome)); if (!cs.length) return toast('Cadastre um contato primeiro.', 'warn'); modal('Registrar prospecção', `<form data-form="ativ" class="form-grid"><label class="field span2"><span>Contato</span><select name="contatoId" id="f-contatoId" required>${cs.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></label>${ativCampos()}</form>`); },
-  notifs: () => modal('Notificações', V.notifsHtml(), { refresh: V.notifsHtml }),
+  notifs: async () => { const st = await P.pushStatus().catch(() => 'indisponivel'); const h = () => V.pushBox(st) + V.notifsHtml(); modal('Notificações', h(), { refresh: h }); },
   notif: async id => { const n = S.notifs[id]; if (!n) return; if (!n.lida) upd('notifs/' + id, { lida: true }).catch(() => {}); closeModal(); if (n.link) location.hash = n.link; },
   'notifs-lidas': () => list(S.notifs).filter(n => !n.lida).reduce((p, n) => p.then(() => upd('notifs/' + n.id, { lida: true })), Promise.resolve()).catch(() => {}),
   'tarefa-ok': id => { const t = S.tarefas[id]; if (!t) return; run(async () => { await upd('tarefas/' + id, { status: 'concluida', doneAt: nowISO(), doneBy: S.uid }); if (t.recorrencia) { let p = addDays(t.prazo || today(), t.recorrencia === 'semanal' ? 7 : 1); while (t.recorrencia === 'diaria' && [0, 6].includes(new Date(p + 'T12:00:00Z').getUTCDay())) p = addDays(p, 1); await add('tarefas', { titulo: t.titulo, descricao: t.descricao || '', prioridade: t.prioridade || 'normal', recorrencia: t.recorrencia, ownerId: t.ownerId, equipeId: t.equipeId || '', createdBy: t.createdBy || S.uid, status: 'aberta', prazo: p, createdAt: nowISO() }); } if (t.createdBy && t.createdBy !== S.uid) notify(t.createdBy, `${nome(S.uid)} concluiu a tarefa “${t.titulo}”`, 'plano'); }, 'Tarefa concluída'); },
@@ -216,7 +255,7 @@ const ACT = {
   escola: v => { S.sub.escola = v === '' ? null : Number(v); render(true); },
   curso: id => { S.sub.curso = id || null; S.sub.aula = null; if (S.view !== 'academy') location.hash = 'academy'; else { render(true); window.scrollTo(0, 0); } closeModal(); },
   aula: i => { S.sub.aula = Number(i); render(true); },
-  'aula-ok': id => { const [c, a] = id.split(':'); run(() => merge('progresso/' + S.uid, { aulas: { [c]: { [a]: nowISO() } } }, S.progresso[S.uid]), 'Aula concluída'); },
+  'aula-ok': id => { const [c, a] = id.split(':'); run(() => merge('progresso/' + S.uid, { aulas: { [c]: { [a]: nowISO() } } }, S.progresso[S.uid]), 'Aula concluída').then(() => render(true)); },
   cert: id => modal('Certificado', V.certificado(id) + `<div class="row-a"><button class="btn accent" data-act="cert-baixar" data-id="${id}">${V.ic('download', 16)} Baixar certificado</button></div>`, { wide: true }),
   'cert-baixar': id => baixar(`certificado-${C.certCodigo(S.uid, id)}.html`, `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Certificado Primoris Academy</title><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet"><style>${document.getElementById('cert-css').textContent}</style></head><body style="background:#111;margin:0;padding:40px">${V.certificado(id)}</body></html>`, 'text/html'),
   'crm-modo': v => { S.sub.crm.modo = v; render(true); },
@@ -244,7 +283,8 @@ const ACT = {
   reprovar: async id => { const m = await pedirTexto('Reprovar venda', 'Motivo da reprovação'); if (m) decidirVenda(id, 'reprovada', m); },
   'cancelar-venda': async id => { const m = await pedirTexto('Cancelar venda validada', 'Motivo (desistência, inadimplência…)'); if (m) decidirVenda(id, 'cancelada', m); },
   'solicitar-nivel': () => { const pn = C.proxNivel(S.uid); if (!pn) return; run(() => add('progressoes', { uid: S.uid, de: me().nivel || 0, para: pn.idx, status: 'solicitada', at: nowISO() }), 'Solicitação enviada').then(() => { [...gestoresDe(S.uid), ...admins()].forEach(u => notify(u, `${nome(S.uid)} solicitou progressão para ${pn.nome}`, 'admin')); }); },
-  'doc-enviar': async rid => { const req = (C.niveisCfg()[(me().nivel || 0) + 1]?.requisitos || []).find(r => r.id === rid); const v = await pedirTexto(req?.label || 'Documento', 'Informe o número ou a referência do documento (ex.: CNPJ 00.000.000/0001-00)'); if (v) run(() => merge('progresso/' + S.uid, { docs: { [rid]: { valor: v, label: req?.label || rid, at: nowISO(), conferido: false } } }, S.progresso[S.uid]), 'Documento enviado para conferência').then(() => admins().forEach(a => notify(a, `${nome(S.uid)} enviou documento: ${req?.label || ''}`, 'admin'))); },
+  'doc-enviar': rid => { const req = (C.niveisCfg()[(me().nivel || 0) + 1]?.requisitos || []).find(r => r.id === rid); modal(req?.label || 'Enviar documento', `<form data-form="doc" data-id="${rid}" class="form-grid">${P.temArquivos() ? '<label class="field span2"><span>Arquivo (PDF ou foto, até 10 MB)</span><input type="file" id="f-arquivo" name="arquivo" accept="application/pdf,image/*" required></label>' : ''}<label class="field span2"><span>Número ou referência (ex.: CNPJ 00.000.000/0001-00)</span><input id="f-valor" name="valor" required></label><div class="span2 row-a"><button class="btn accent">Enviar para conferência</button></div></form>`); },
+  'doc-enviar-antigo': async rid => { const req = (C.niveisCfg()[(me().nivel || 0) + 1]?.requisitos || []).find(r => r.id === rid); const v = await pedirTexto(req?.label || 'Documento', 'Informe o número ou a referência do documento (ex.: CNPJ 00.000.000/0001-00)'); if (v) run(() => merge('progresso/' + S.uid, { docs: { [rid]: { valor: v, label: req?.label || rid, at: nowISO(), conferido: false } } }, S.progresso[S.uid]), 'Documento enviado para conferência').then(() => admins().forEach(a => notify(a, `${nome(S.uid)} enviou documento: ${req?.label || ''}`, 'admin'))); },
   'plano-aprovar': uid => run(() => merge('progresso/' + uid, { plano: { status: 'aprovado', by: S.uid, decididoAt: nowISO() } }, S.progresso[uid]), 'Plano aprovado').then(() => notify(uid, 'Seu plano de ação foi aprovado. As metas passam a valer a partir de hoje.', 'plano')),
   'plano-devolver': async uid => { const m = await pedirTexto('Devolver plano', 'O que ajustar?'); if (m) run(() => merge('progresso/' + uid, { plano: { status: 'devolvido', motivo: m, by: S.uid, decididoAt: nowISO() } }, S.progresso[uid]), 'Plano devolvido').then(() => notify(uid, 'Seu plano de ação foi devolvido para ajustes.', 'semana-zero')); },
   perfil: uid => { S.sub.perfil = uid || null; if (S.view !== 'equipe') location.hash = 'equipe'; else { render(true); window.scrollTo(0, 0); } },
@@ -287,7 +327,7 @@ document.addEventListener('click', e => {
   const rm = e.target.closest('[data-rm]'); if (rm) { rm.closest('.rowed').remove(); return; }
   const el = e.target.closest('[data-act]'); if (!el) { if (!e.target.closest('#side') && !e.target.closest('[data-act="menu"]')) document.getElementById('side')?.classList.remove('open'); return; }
   const fn = ACT[el.dataset.act]; if (!fn) return;
-  if (el.tagName === 'A' && el.dataset.act !== 'wa') e.preventDefault();
+  if (el.tagName === 'A' && !['wa', 'ligar'].includes(el.dataset.act)) e.preventDefault();
   fn(el.dataset.id ?? '', el);
 });
 document.addEventListener('keydown', e => {
@@ -307,7 +347,7 @@ document.addEventListener('input', e => {
 function setFilter(t) {
   const k = t.dataset.filter; const v = t.type === 'checkbox' ? t.checked : t.value;
   if (k.startsWith('crm.')) S.sub.crm[k.slice(4)] = v;
-  else if (['agEquipe', 'tfEquipe'].includes(k)) S.sub[k] = v;
+  else if (['agEquipe', 'tfEquipe', 'comMes'].includes(k)) S.sub[k] = v;
   else { S.dash[k] = v; if (k === 'escopo') { S.dash.consultor = ''; if (v !== 'equipe') S.dash.equipe = ''; } }
   render(true);
 }
@@ -321,6 +361,32 @@ document.addEventListener('drop', e => { const col = e.target.closest?.('[data-d
 
 // ---------- Formulários
 const FORM = {
+  async doc(f, rid, form) {
+    const req = (C.niveisCfg()[(me().nivel || 0) + 1]?.requisitos || []).find(r => r.id === rid);
+    const file = form.querySelector('#f-arquivo')?.files?.[0]; let arquivo = '';
+    if (file) { if (file.size > 10 * 1024 * 1024) throw new Error('O arquivo passa de 10 MB.'); arquivo = await P.enviarArquivo(file, rid); }
+    await merge('progresso/' + S.uid, { docs: { [rid]: { valor: f.valor, label: req?.label || rid, arquivo, at: nowISO(), conferido: false } } }, S.progresso[S.uid]);
+    admins().forEach(a => notify(a, `${nome(S.uid)} enviou documento: ${req?.label || ''}`, 'admin'));
+    return 'Documento enviado para conferência';
+  },
+  async desafio(f, id) {
+    const l = (S.config.desafios?.lista || []).slice(); const d = { id: id || 'd' + Date.now().toString(36), titulo: f.titulo.trim(), indicador: f.indicador, meta: parseMoney(f.meta), inicio: f.inicio, fim: f.fim, premio: f.premio || '', ativo: true };
+    if (d.fim < d.inicio) throw new Error('A data de fim precisa ser depois do início.');
+    const i = l.findIndex(x => x.id === d.id); if (i >= 0) l[i] = d; else l.push(d);
+    await put('config/desafios', { lista: l, updatedAt: nowISO() });
+    if (f.anunciar) C.ativos().forEach(m => notify(m.id, `Novo desafio: ${d.titulo} (meta ${d.indicador === 'vgv' ? C.brlShort(d.meta) : d.meta} · até ${C.fmtDate(d.fim)})`, 'conquistas'));
+    audit('Desafio salvo', d.titulo); return 'Desafio salvo';
+  },
+  async comissoes(f, _, form) {
+    const regras = [...form.querySelectorAll('[data-row=regra]')].map(r => ({ produto: r.querySelector('[name=r_produto]').value, administradora: r.querySelector('[name=r_adm]').value.trim() || '*', nivel: r.querySelector('[name=r_nivel]').value, percentual: Number(String(r.querySelector('[name=r_pct]').value).replace(',', '.')) })).filter(r => r.percentual > 0);
+    await put('config/comissoes', { regras, obs: f.obs || '', updatedAt: nowISO(), updatedBy: S.uid }); audit('Regras de comissão alteradas', `${regras.length} regras`); return 'Regras de comissão salvas';
+  },
+  async mensagens(f) {
+    const blocos = t => String(t || '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+    const modelos = blocos(f.modelos).map(b => { const [titulo, etapas, ...resto] = b.split('|').map(x => x.trim()); return { titulo, etapas: (etapas || '').split(',').map(x => x.trim()).filter(Boolean), texto: resto.join(' | ') }; }).filter(m => m.titulo && m.texto);
+    const objecoes = blocos(f.objecoes).map(b => { const [objecao, ...resto] = b.split('|').map(x => x.trim()); return { objecao, resposta: resto.join(' | ') }; }).filter(o => o.objecao && o.resposta);
+    await put('config/mensagens', { modelos, objecoes, updatedAt: nowISO() }); return 'Mensagens salvas';
+  },
   async solicitar(f) {
     if (!f.telefone || f.telefone.replace(/\D/g, '').length < 10) throw new Error('Informe um WhatsApp com DDD.');
     await put('solicitacoes/' + S.uid, { nome: f.nome.trim(), email: f.email.trim().toLowerCase(), telefone: normPhone(f.telefone), aceiteTermos: nowISO(), versaoTermos: '1.0', at: nowISO() });
@@ -362,10 +428,11 @@ const FORM = {
     }
     return 'Resultado registrado';
   },
-  async venda(f, id) {
+  async venda(f, id, form) {
     const valor = parseMoney(f.valor); if (!(valor > 0)) throw new Error('Informe o valor da carta de crédito.');
     const d = { contatoId: f.contatoId, clienteNome: S.contatos[f.contatoId]?.nome || '', produto: f.produto, administradora: f.administradora || '', valor, data: f.data, proposta: f.proposta || '', prazoMeses: Number(f.prazoMeses) || null, grupo: f.grupo || '', cota: f.cota || '', obs: f.obs || '', updatedAt: nowISO() };
     if (id) { const v = S.vendas[id]; await upd('vendas/' + id, { ...d, reenviadaAt: nowISO(), historico: hist(v.historico, { status: 'registrada', by: S.uid, at: nowISO(), motivo: 'Reenviada após correção' }) }); admins().forEach(a => notify(a, `${nome(S.uid)} corrigiu e reenviou uma venda`, 'vendas')); return 'Venda reenviada para validação'; }
+    const arq = form?.querySelector('#f-comprovante')?.files?.[0]; if (arq && P.temArquivos()) { if (arq.size > 10 * 1024 * 1024) throw new Error('O comprovante passa de 10 MB.'); d.comprovante = await P.enviarArquivo(arq, 'venda'); }
     await add('vendas', { ...d, ownerId: S.uid, equipeId: C.equipeDe(S.uid), createdAt: nowISO(), historico: [{ status: 'registrada', by: S.uid, at: nowISO() }] });
     const c = S.contatos[f.contatoId]; if (c) await mudarEtapa(c, 'venda');
     [...gestoresDe(S.uid), ...admins()].forEach(u => notify(u, `${nome(S.uid)} registrou uma venda de ${C.brl(valor)} para validação`, 'vendas'));
@@ -453,5 +520,14 @@ document.addEventListener('submit', async e => {
   } catch (err) { console.error(err); toast(err?.code ? errMsg(err) : err.message || 'Não foi possível salvar.', 'bad'); }
   finally { if (btn) btn.disabled = false; }
 });
+
+// ---------- App instalável e atualizações
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.installPrompt = e; schedule(); });
+if ('serviceWorker' in navigator && !window.claude?.use && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  let recarregando = false; const tinhaVersao = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (recarregando || !tinhaVersao) return; recarregando = true; if (!editing() && !$modal.innerHTML) location.reload(); });
+}
+setTimeout(async () => { try { if (!S.dataReady || !me()) return; const st = await P.pushStatus(); let visto = null; try { visto = localStorage.getItem('pushDica'); } catch (e) { /* */ } if (st === 'inativo' && !visto) { try { localStorage.setItem('pushDica', '1'); } catch (e) { /* */ } toast('Dica: toque no sino e ative as notificações para receber lembretes de reuniões e follow-ups.'); } } catch (e) { /* */ } }, 6000);
 
 boot();
