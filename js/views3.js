@@ -2,8 +2,8 @@
 import {
   S, esc, brl, brlShort, num, pct, fmtDT, fmtDate, list, firstName, nome, isGestor, isAdmin, minhasEquipes, equipeDe,
   CATEGORIAS_FORUM, papel, respostasDe, statusTopico, projecao, initials,
-} from './core.js?v=6';
-import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=6';
+} from './core.js?v=7';
+import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=7';
 
 const autor = (uid, extra = '') => {
   const m = S.members[uid] || {}; const g = ['gestor', 'admin', 'superadmin'].includes(m.role);
@@ -64,3 +64,60 @@ export const projecaoCard = uid => {
     ${p.plano ? `<p class="small muted">Plano de ação aprovado: ${num(p.plano.prospeccoes)} prospecções/dia, meta de ${brl(p.plano.vgv90)} em 90 dias.</p>` : ''}
   </div>`, `<div class="row-a"><button class="btn xs" data-act="ver-carteira" data-id="${uid}">Ver carteira</button><button class="btn xs" data-act="ver-agenda" data-id="${uid}">Ver agenda</button></div>`, 'span2');
 };
+
+// ---------- Eventos
+const eventosFuturos = () => list(S.eventos).filter(e => e.ativo !== false && (e.data || '9999') >= todayStr()).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+const todayStr = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+const inscritosDe = eid => list(S.inscricoes).filter(i => i.eventoId === eid && !i.canceladaEm);
+const minhaInscricao = eid => list(S.inscricoes).find(i => i.eventoId === eid && i.ownerId === S.uid && !i.canceladaEm);
+const pessoas = ins => 1 + (ins.visitantes || []).filter(Boolean).length;
+const dataEvento = e => `${e.data ? fmtDate(e.data) : 'Data a definir'}${e.hora ? ' às ' + esc(e.hora) : ''}`;
+const statusEmail = i => { const s = i.email?.status; return s === 'enviado' ? chip('E-mail enviado', 'ok') : s === 'erro' ? chip('Falha no e-mail', 'bad') : s === 'aguardando_configuracao' ? chip('E-mail pendente', 'warn') : chip('Enviando e-mail…'); };
+
+export const eventosTile = () => {
+  const prox = eventosFuturos()[0]; const minha = prox && minhaInscricao(prox.id);
+  return `<a class="evento-tile" href="#eventos"><span class="balao">${ic('balao', 34)}</span><span class="et-txt"><strong>EVENTOS</strong><span>${prox ? `${esc(prox.titulo)} · ${dataEvento(prox)}` : 'Fique de olho nos próximos eventos da Primoris'}</span></span><span class="et-cta">${prox ? (minha ? chip('Você está inscrito', 'ok') : '<span class="btn sm accent">Inscrever-se</span>') : ic('arrow', 18)}</span></a>`;
+};
+
+export const eventos = () => {
+  const fut = eventosFuturos(); const minhas = list(S.inscricoes).filter(i => i.ownerId === S.uid && !i.canceladaEm).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  return pageHead(`<span class="balao-t">${ic('balao', 30)}</span> Eventos`, 'Inscreva-se e leve seus convidados. Você recebe a confirmação por e-mail.', isAdmin() ? `<button class="btn sm" data-act="ad-eventos">${ic('gear', 16)} Gerenciar eventos</button>` : '')
+    + (fut.length ? `<div class="eventos">${fut.map(e => { const m = minhaInscricao(e.id); const ins = inscritosDe(e.id); const total = ins.reduce((s, i) => s + pessoas(i), 0); const lot = e.limite && total >= Number(e.limite); return `<article class="evento card"><div class="ev-data"><span>${e.data ? esc(e.data.slice(8, 10)) : '--'}</span><small>${e.data ? esc(['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][Number(e.data.slice(5, 7)) - 1]) : ''}</small></div><div class="ev-info"><h3>${esc(e.titulo)}</h3><p class="muted small">${dataEvento(e)}${e.local ? ' · ' + esc(e.local) : ''}</p>${e.descricao ? `<p>${esc(e.descricao).replace(/\n/g, '<br>')}</p>` : ''}<p class="small muted">${total} pessoa(s) confirmada(s)${e.limite ? ` de ${num(e.limite)} vagas` : ''}</p></div><div class="ev-acao">${m ? `${chip('Inscrito', 'ok')} ${statusEmail(m)}<div class="row-a"><button class="btn xs" data-act="inscrever" data-id="${e.id}">Editar</button><button class="btn xs danger" data-act="cancelar-inscricao" data-id="${m.id}">Cancelar</button></div>` : lot ? chip('Esgotado', 'bad') : `<button class="btn accent" data-act="inscrever" data-id="${e.id}">${ic('balao', 18)} Inscrever-se</button>`}</div></article>`; }).join('')}</div>`
+      : empty('Nenhum evento aberto', isAdmin() ? 'Crie um evento em Gerenciar eventos para liberar as inscrições.' : 'Assim que a Primoris abrir um evento, ele aparece aqui.'))
+    + (minhas.length ? `<section class="card tablewrap"><header class="card-h"><h3>Minhas inscrições</h3></header><table class="tbl"><thead><tr><th>Evento</th><th>Data</th><th class="r">Visitantes</th><th>Confirmação</th></tr></thead><tbody>${minhas.map(i => { const e = S.eventos[i.eventoId] || {}; return `<tr><td>${esc(e.titulo || 'Evento')}</td><td>${dataEvento(e)}</td><td class="r">${(i.visitantes || []).filter(Boolean).length}</td><td>${statusEmail(i)}</td></tr>`; }).join('')}</tbody></table></section>` : '');
+};
+
+export const inscricaoForm = (e, ins = {}) => {
+  const m = S.members[S.uid] || {}; const vis = ins.visitantes || []; const q = ins.id ? vis.length : 0;
+  return `<form data-form="inscricao" data-id="${e.id}" data-ins="${ins.id || ''}" class="form-grid">
+  <div class="span2 ev-resumo"><strong>${esc(e.titulo)}</strong><span class="muted small">${dataEvento(e)}${e.local ? ' · ' + esc(e.local) : ''}</span></div>
+  ${field('Seu nome completo *', inp('nome', ins.nome || m.nome || '', 'required autocomplete="name"'), 'span2')}
+  ${field('E-mail *', inp('email', ins.email || m.email || S.profile?.email || '', 'type="email" required autocomplete="email"'))}
+  ${field('Celular / WhatsApp *', inp('celular', ins.celular || (m.telefone ? String(m.telefone).replace(/^55/, '') : ''), 'required inputmode="tel" placeholder="(21) 99999-9999"'))}
+  ${field('Quantos visitantes você vai levar?', `<input id="f-qtd" name="qtd" type="number" min="0" max="${Math.min(30, Number(e.maxVisitantes) || 30)}" value="${q}" data-visitantes>`, 'span2')}
+  <div class="span2 visitantes" id="visitantes">${vis.map((v, i) => visitanteInput(i, v)).join('')}</div>
+  <p class="muted small span2">Ao confirmar, você e a Primoris recebem um e-mail com os dados da inscrição.</p>
+  <div class="span2 row-a"><button class="btn accent">${ins.id ? 'Salvar alterações' : 'Confirmar inscrição'}</button></div></form>`;
+};
+export const visitanteInput = (i, v = '') => `<label class="field"><span>Nome do visitante ${i + 1} *</span><input name="v${i}" id="f-v${i}" value="${esc(v)}" required autocomplete="off"></label>`;
+
+export const eventosAdmin = () => {
+  const evs = list(S.eventos).sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  const sel = S.sub.evSel && S.eventos[S.sub.evSel] ? S.sub.evSel : evs[0]?.id;
+  const ins = sel ? inscritosDe(sel).sort((a, b) => (a.at || '').localeCompare(b.at || '')) : [];
+  const pend = list(S.inscricoes).filter(i => i.email?.status && i.email.status !== 'enviado' && !i.canceladaEm).length;
+  return `<div class="row-a"><button class="btn accent sm" data-act="novo-evento">${ic('plus', 16)} Novo evento</button>${pend ? `<span class="chip warn">${pend} e-mail(s) pendente(s)</span>` : ''}</div>`
+    + (evs.length ? `<section class="card tablewrap"><table class="tbl"><thead><tr><th>Evento</th><th>Data</th><th>Local</th><th class="r">Inscritos</th><th class="r">Pessoas</th><th>Status</th><th></th></tr></thead><tbody>${evs.map(e => { const l = inscritosDe(e.id); return `<tr class="${e.id === sel ? 'sel' : ''}"><td><button class="linkbtn" data-act="ev-sel" data-id="${e.id}"><strong>${esc(e.titulo)}</strong></button></td><td>${dataEvento(e)}</td><td>${esc(e.local || '')}</td><td class="r">${l.length}</td><td class="r">${l.reduce((s, i) => s + pessoas(i), 0)}${e.limite ? ' / ' + num(e.limite) : ''}</td><td>${e.ativo === false ? chip('Encerrado') : chip('Aberto', 'ok')}</td><td class="acts"><button class="btn xs" data-act="editar-evento" data-id="${e.id}">Editar</button></td></tr>`; }).join('')}</tbody></table></section>` : empty('Nenhum evento criado', 'Crie o primeiro evento para liberar as inscrições no Dashboard.'))
+    + (sel ? `<section class="card tablewrap"><header class="card-h"><h3>Inscritos · ${esc(S.eventos[sel].titulo)}</h3><button class="btn xs" data-act="exportar-inscritos" data-id="${sel}">${ic('download', 14)} Exportar lista</button></header>${ins.length ? `<table class="tbl"><thead><tr><th>Inscrito</th><th>Contato</th><th>Consultor</th><th>Visitantes</th><th>E-mail</th></tr></thead><tbody>${ins.map(i => `<tr><td><strong>${esc(i.nome)}</strong><div class="small muted">${fmtDT(i.at)}</div></td><td class="small">${esc(i.email)}<br>${esc(i.celular)}</td><td>${esc(nome(i.ownerId))}</td><td class="small">${(i.visitantes || []).filter(Boolean).map(esc).join('<br>') || '—'}</td><td>${statusEmail(i)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nenhuma inscrição ainda.</p>'}</section>` : '');
+};
+export const eventoForm = (e = {}) => `<form data-form="evento" data-id="${e.id || ''}" class="form-grid">
+  ${field('Nome do evento *', inp('titulo', e.titulo, 'required'), 'span2')}
+  ${field('Data *', inp('data', e.data, 'type="date" required'))}
+  ${field('Horário', inp('hora', e.hora, 'type="time"'))}
+  ${field('Local', inp('local', e.local, 'placeholder="Endereço ou link"'), 'span2')}
+  ${field('Descrição', txt('descricao', e.descricao, 'rows="3"'), 'span2')}
+  ${field('Limite total de pessoas (opcional)', inp('limite', e.limite, 'type="number" min="1"'))}
+  ${field('Máximo de visitantes por inscrição', inp('maxVisitantes', e.maxVisitantes || 10, 'type="number" min="0" max="30"'))}
+  ${field('Status', sel('ativo', [['1', 'Inscrições abertas'], ['0', 'Encerrado']], e.ativo === false ? '0' : '1'))}
+  <label class="check span2"><input type="checkbox" name="avisar" id="f-avisar" ${e.id ? '' : 'checked'}> <span>Avisar todos por notificação</span></label>
+  <div class="span2 row-a"><button class="btn accent">Salvar evento</button></div></form>`;

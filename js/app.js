@@ -1,9 +1,9 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=6';
-import * as V from './views.js?v=6';
-import * as P from './platform.js?v=6';
-import * as V2 from './views2.js?v=6';
-import * as V3 from './views3.js?v=6';
+import * as C from './core.js?v=7';
+import * as V from './views.js?v=7';
+import * as P from './platform.js?v=7';
+import * as V2 from './views2.js?v=7';
+import * as V3 from './views3.js?v=7';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -63,7 +63,7 @@ function screen() {
   if ((m.status || 'ativo') !== 'ativo') return V.bloqueado();
   if (!S.dataReady) return V.loading('Sincronizando seus dados…');
   if (!prog(S.uid).welcomeDone && role() === 'consultor') return V.boasVindas();
-  const views = { forum: V3.forum, resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
+  const views = { eventos: V3.eventos, forum: V3.forum, resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
   let v = S.view;
   if (['equipe', 'relatorios'].includes(v) && !isGestor()) v = 'inicio';
   if (v === 'admin' && !isAdmin()) v = 'inicio';
@@ -130,6 +130,8 @@ function startData() {
   ['contatos', 'atividades', 'reunioes', 'vendas', 'tarefas'].forEach(c => track('d:' + c, own(c), s => { S[c] = toMap(s); }));
   track('d:validacoes', db.collection('validacoes'), s => { S.validacoes = toMap(s); });
   track('d:forum', db.collection('forum'), s => { S.forum = toMap(s); });
+  track('d:eventos', db.collection('eventos'), s => { S.eventos = toMap(s); });
+  track('d:inscricoes', mine ? db.collection('inscricoes').where('ownerId', '==', uid) : db.collection('inscricoes'), s => { S.inscricoes = toMap(s); });
   track('d:forum_resp', db.collection('forum_resp'), s => { S.forum_resp = toMap(s); });
   track('d:cursos', db.collection('cursos'), s => { S.cursos = toMap(s); });
   if (mine) track('d:progresso', db.doc('progresso/' + uid), d => { S.progresso = d.exists ? { [uid]: d.data() } : {}; });
@@ -223,6 +225,13 @@ async function baixar(filename, data, tipo = 'text/csv') {
 
 // ---------- Cliques
 const ACT = {
+  inscrever: id => { const e = S.eventos[id]; if (!e) return; const m = list(S.inscricoes).find(i => i.eventoId === id && i.ownerId === S.uid && !i.canceladaEm); modal(m ? 'Editar inscrição' : 'Inscrição no evento', V3.inscricaoForm(e, m || {}), { wide: true }); },
+  'cancelar-inscricao': async id => { if (await confirmar('Cancelar inscrição', 'Sua inscrição e a dos seus visitantes serão canceladas.', 'Cancelar inscrição')) run(() => upd('inscricoes/' + id, { canceladaEm: nowISO() }), 'Inscrição cancelada').then(() => admins().forEach(a => notify(a, `${nome(S.uid)} cancelou a inscrição em ${S.eventos[S.inscricoes[id]?.eventoId]?.titulo || 'evento'}`, 'eventos'))); },
+  'ad-eventos': () => { S.sub.adTab = 'eventos'; location.hash = 'admin'; },
+  'novo-evento': () => modal('Novo evento', V3.eventoForm(), { wide: true }),
+  'editar-evento': id => modal('Editar evento', V3.eventoForm({ id, ...S.eventos[id] }), { wide: true }),
+  'ev-sel': id => { S.sub.evSel = id; render(true); },
+  'exportar-inscritos': id => { const e = S.eventos[id]; const l = list(S.inscricoes).filter(i => i.eventoId === id && !i.canceladaEm); audit('Exportação de inscritos', e.titulo); baixar(`inscritos-${(e.titulo || 'evento').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`, C.toCSV([['Inscrito', 'E-mail', 'Celular', 'Consultor', 'Qtd. visitantes', 'Visitantes', 'Inscrição em'], ...l.map(i => [i.nome, i.email, i.celular, nome(i.ownerId), (i.visitantes || []).filter(Boolean).length, (i.visitantes || []).filter(Boolean).join(', '), C.fmtDT(i.at)])])); },
   'nova-duvida': () => modal('Nova dúvida', V3.duvidaForm(), { wide: true }),
   topico: id => { S.sub.topico = id || null; if (S.view !== 'forum') location.hash = 'forum'; else { render(true); window.scrollTo(0, 0); } },
   ff: v => { S.sub.ff = v; render(true); },
@@ -270,7 +279,7 @@ const ACT = {
   aula: i => { S.sub.aula = Number(i); render(true); },
   'aula-ok': id => { const [c, a] = id.split(':'); run(() => merge('progresso/' + S.uid, { aulas: { [c]: { [a]: nowISO() } } }, S.progresso[S.uid]), 'Aula concluída').then(() => render(true)); },
   cert: id => modal('Certificado', V.certificado(id) + `<div class="row-a"><button class="btn accent" data-act="cert-baixar" data-id="${id}">${V.ic('download', 16)} Baixar certificado</button></div>`, { wide: true }),
-  'cert-baixar': id => baixar(`certificado-${C.certCodigo(S.uid, id)}.html`, `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Certificado Primoris Academy</title><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet"><style>${document.getElementById('cert-css').textContent}</style></head><body style="background:#111;margin:0;padding:40px">${V.certificado(id)}</body></html>`, 'text/html'),
+  'cert-baixar': id => baixar(`certificado-${C.certCodigo(S.uid, id)}.html`, `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Certificado Primoris Academy</title><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet"><style>${document.getElementById('cert-css').textContent}</style></head><body style="background:#111;margin:0;padding:40px">${V.certificado(id).replace(/src="img\//g, 'src="' + location.origin + location.pathname.replace(/[^/]*$/, '') + 'img/')}</body></html>`, 'text/html'),
   'crm-modo': v => { S.sub.crm.modo = v; render(true); },
   'novo-contato': () => modal('Novo contato', V.contatoForm(), { wide: true }),
   'editar-contato': id => modal('Editar contato', V.contatoForm(S.contatos[id]), { wide: true }),
@@ -354,6 +363,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('input', e => {
   const t = e.target;
+  if (t.dataset.visitantes !== undefined) { const box = document.getElementById('visitantes'); const n = Math.min(Number(t.max) || 30, Math.max(0, Number(t.value) || 0)); const atuais = [...box.querySelectorAll('input')].map(i => i.value); box.innerHTML = Array.from({ length: n }, (_, i) => V3.visitanteInput(i, atuais[i] || '')).join(''); }
   if (t.dataset.filter && t.tagName === 'INPUT' && t.type !== 'checkbox') { clearTimeout(t._d); t._d = setTimeout(() => { S.focusFilter = t.dataset.filter; setFilter(t); }, 180); }
   if (t.closest('#sim')) document.getElementById('sim-out').innerHTML = V.simCalc(Object.fromEntries(new FormData(t.closest('#sim'))));
 });
@@ -374,6 +384,25 @@ document.addEventListener('drop', e => { const col = e.target.closest?.('[data-d
 
 // ---------- Formulários
 const FORM = {
+  async inscricao(f, eid, form) {
+    const e = S.eventos[eid]; const insId = form.dataset.ins;
+    const email = (f.email || '').trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Informe um e-mail válido.');
+    const cel = normPhone(f.celular); if (cel.length < 12) throw new Error('Informe o celular com DDD.');
+    const qtd = Math.max(0, Number(f.qtd) || 0); const visitantes = Array.from({ length: qtd }, (_, i) => (f['v' + i] || '').trim()).filter(Boolean);
+    if (visitantes.length !== qtd) throw new Error('Preencha o nome de todos os visitantes.');
+    if (e.limite) { const outros = list(S.inscricoes).filter(i => i.eventoId === eid && !i.canceladaEm && i.id !== insId).reduce((s, i) => s + 1 + (i.visitantes || []).length, 0); if (outros + 1 + qtd > Number(e.limite)) throw new Error(`Restam ${Math.max(0, Number(e.limite) - outros)} vaga(s) neste evento.`); }
+    const d = { eventoId: eid, nome: f.nome.trim(), email, celular: C.fmtPhone(cel), visitantes, updatedAt: nowISO() };
+    if (insId) { await upd('inscricoes/' + insId, d); return 'Inscrição atualizada'; }
+    await add('inscricoes', { ...d, ownerId: S.uid, equipeId: C.equipeDe(S.uid), at: nowISO() });
+    admins().forEach(a => notify(a, `${d.nome} se inscreveu em ${e.titulo} com ${qtd} visitante(s)`, 'eventos'));
+    return 'Inscrição confirmada! Enviamos a confirmação para o seu e-mail.';
+  },
+  async evento(f, id) {
+    const d = { titulo: f.titulo.trim(), data: f.data, hora: f.hora || '', local: f.local || '', descricao: f.descricao || '', limite: Number(f.limite) || null, maxVisitantes: Number(f.maxVisitantes) || 0, ativo: f.ativo === '1', updatedAt: nowISO() };
+    if (id) await put('eventos/' + id, { ...S.eventos[id], ...d }); else { const ref = await add('eventos', { ...d, createdAt: nowISO(), createdBy: S.uid }); id = ref.id; }
+    if (f.avisar) C.ativos().forEach(m => notify(m.id, `Novo evento: ${d.titulo} em ${C.fmtDate(d.data)}. Inscreva-se e leve seus convidados!`, 'eventos'));
+    S.sub.evSel = id; audit('Evento salvo', d.titulo); return 'Evento salvo';
+  },
   async duvida(f) {
     const ref = await add('forum', { ownerId: S.uid, equipeId: C.equipeDe(S.uid), titulo: f.titulo.trim(), texto: f.texto.trim(), categoria: f.categoria, at: nowISO() });
     [...new Set([...gestoresDe(S.uid), ...admins()])].forEach(u => notify(u, `Nova dúvida de ${nome(S.uid)} (${C.papel(S.uid)}): ${f.titulo.trim()}`, 'forum'));

@@ -6,9 +6,9 @@ import {
   vgv, vgvTotal, vendasValidadas, vgvMensal, contatosDe, ativDe, prospeccoes, followups, reunioesDe, funil, esfriando, prog,
   szDias, szDia, szResumo, cursosPublicados, cursoStatus, cursosObrigatorios, treinamentosConcluidos, certCodigo, niveisCfg,
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
-} from './core.js?v=6';
-import * as V2 from './views2.js?v=6';
-import * as V3 from './views3.js?v=6';
+} from './core.js?v=7';
+import * as V2 from './views2.js?v=7';
+import * as V3 from './views3.js?v=7';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
@@ -45,10 +45,11 @@ const P = {
   kanban: '<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/>',
   rows: '<path d="M3 6h18M3 12h18M3 18h18"/>',
   shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>',
+  balao: '<ellipse cx="12" cy="8.6" rx="6.2" ry="7.1"/><path d="M10.8 15.6 10.2 17h3.6l-.6-1.4"/><path d="M12 17c-1.6 1.4 1.4 2.6-.2 4.6"/><path d="M14 6.3c-.4-.6-1.1-1-2-1-1.1 0-1.9.6-1.9 1.4 0 2 3.9 1.1 3.9 3.1 0 .9-.9 1.5-2 1.5-.9 0-1.6-.4-2-1M12 4.3v1M12 11.3v1"/>',
 };
 export const ic = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 
-export const crown = (s = 40, cls = '') => `<svg class="crown ${cls}" width="${s}" height="${Math.round(s * 0.78)}" viewBox="0 0 64 50" aria-hidden="true"><path class="cr-body" d="M7 38 4 13l14 12L32 4l14 21 14-12-3 25z"/><rect class="cr-band" x="7" y="40" width="50" height="7" rx="2"/><circle class="cr-gem" cx="4" cy="13" r="3.6"/><circle class="cr-gem" cx="32" cy="4" r="3.6"/><circle class="cr-gem" cx="60" cy="13" r="3.6"/><circle class="cr-dot" cx="20" cy="43.5" r="1.6"/><circle class="cr-dot" cx="32" cy="43.5" r="1.6"/><circle class="cr-dot" cx="44" cy="43.5" r="1.6"/></svg>`;
+export const crown = (s = 40, cls = '') => `<img class="crown ${cls}" src="img/coroa-${s > 120 ? 640 : s > 40 ? 240 : 64}.webp" width="${s}" height="${Math.round(s * 0.713)}" alt="" decoding="async">`;
 export const brandBig = (anim = false) => `<div class="brand-big">${crown(54, anim ? 'anim' : '')}<strong>PRIMORIS</strong><span>ACADEMY</span></div>`;
 
 // ---------- Peças
@@ -130,6 +131,7 @@ export const NAV = () => {
     ...(!szResumo(S.uid).concluida && szDias().length ? [['semana-zero', 'Semana Zero', 'flag']] : []),
     ['academy', 'Academy', 'book'],
     ['forum', 'Fórum', 'msg'],
+    ['eventos', 'Eventos', 'balao'],
     ['carteira', 'Minha Carteira', 'users'],
     ['agenda', 'Agenda', 'calendar'],
     ['plano', 'Plano de Ação', 'checksq'],
@@ -240,7 +242,7 @@ export const inicio = () => {
   const dAt = desafioAtivoV(); const desafioHtml = dAt.length ? card('Desafio da semana', dAt.map(d => V2.desafioCard(d, eu ? [S.uid] : uids)).join(''), '<a href="#conquistas" class="link">Ver todos</a>', 'span2') : '';
   const grafico = card('Evolução mensal do VGV validado', barChart(vgvMensal(uids, 6)), '<span class="muted small">últimos 6 meses</span>') + card('Funil da carteira', funilChart(uids));
   const conq = eu ? (() => { const c = conquistasDe(S.uid).filter(x => x.ok); return card('Conquistas', c.length ? `<div class="medals sm">${c.slice(-6).map(x => `<span class="medal on">${ic('medal', 20)}<small>${esc(x.nome)}</small></span>`).join('')}</div>` : empty('Primeira conquista à vista', 'Conclua a Semana Zero para ganhar sua primeira medalha.'), '<a href="#conquistas" class="link">Ver todas</a>', 'span2'); })() : '';
-  return `${filtroBar()}${kpis}<div class="grid2">${linha2}${linha3}${desafioHtml}${grafico}${linha5}${conq}</div>`;
+  return `${V3.eventosTile()}${filtroBar()}${kpis}<div class="grid2">${linha2}${linha3}${desafioHtml}${grafico}${linha5}${conq}</div>`;
 };
 const nowISOsafe = () => new Date().toISOString();
 
@@ -618,7 +620,7 @@ export const admin = () => {
   const tab = S.sub.adTab || 'usuarios';
   const nSol = Object.keys(S.solicitacoes).length, nProg = list(S.progressoes).filter(p => p.status === 'solicitada').length;
   const docsPend = ativos().reduce((s, m) => s + Object.values(prog(m.id).docs || {}).filter(d => !d.conferido).length, 0);
-  const tabs = [['usuarios', `Usuários${nSol ? ` (${nSol})` : ''}`], ['equipes', 'Equipes'], ['progressoes', `Carreira${nProg + docsPend ? ` (${nProg + docsPend})` : ''}`], ['cursos', 'Treinamentos'], ['semanazero', 'Semana Zero'], ['comissoes', 'Comissões'], ['desafios', 'Desafios'], ['mensagens', 'Mensagens'], ['parametros', 'Parâmetros'], ['backup', 'Backup'], ['auditoria', 'Auditoria'], ['ajuda', 'Ajuda']];
+  const tabs = [['usuarios', `Usuários${nSol ? ` (${nSol})` : ''}`], ['equipes', 'Equipes'], ['progressoes', `Carreira${nProg + docsPend ? ` (${nProg + docsPend})` : ''}`], ['cursos', 'Treinamentos'], ['semanazero', 'Semana Zero'], ['comissoes', 'Comissões'], ['desafios', 'Desafios'], ['mensagens', 'Mensagens'], ['parametros', 'Parâmetros'], ['eventos', 'Eventos'], ['backup', 'Backup'], ['auditoria', 'Auditoria'], ['ajuda', 'Ajuda']];
   let body = '';
   if (tab === 'usuarios') {
     const sols = list(S.solicitacoes).sort((a, b) => (a.at || '').localeCompare(b.at || ''));
@@ -655,6 +657,7 @@ export const admin = () => {
   } else if (tab === 'desafios') { body = V2.desafiosAdmin();
   } else if (tab === 'mensagens') { body = V2.mensagensAdmin();
   } else if (tab === 'backup') { body = V2.backupAdmin();
+  } else if (tab === 'eventos') { body = V3.eventosAdmin();
   } else if (tab === 'auditoria') {
     const a = list(S.audit).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 200);
     body = `<section class="card tablewrap"><table class="tbl"><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Alvo</th></tr></thead><tbody>${a.map(x => `<tr><td>${fmtDT(x.at)}</td><td>${esc(nome(x.by))}</td><td>${esc(x.acao)}</td><td>${esc(x.alvo)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem registros.</td></tr>'}</tbody></table></section>`;

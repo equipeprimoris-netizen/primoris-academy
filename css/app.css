@@ -530,3 +530,44 @@ body { background: var(--bg); }
 @media (prefers-reduced-motion: reduce) { .crown-bg, .spark { animation: none !important; } .spark { display: none; } }
 .funil.larg .frow { grid-template-columns: 150px 1fr 120px; }
 .crown-bg .cr-gem { fill: rgba(255,255,255,.7); }
+
+/* ---------- Logo oficial (coroa) e fundo com a equipe */
+img.crown { display: block; height: auto; object-fit: contain; }
+.brand-big img.crown { width: 120px; margin: 0 auto; filter: drop-shadow(0 6px 22px rgba(215,25,46,.45)); }
+.side-brand .mark { background: transparent; border: 0; width: 48px; height: 40px; }
+.side-brand .mark img.crown { width: 46px; }
+.crown.anim { animation: coroaEntra 1.1s var(--ease) both, coroaBrilho 3.2s 1.1s ease-in-out infinite; }
+@keyframes coroaEntra { 0% { opacity: 0; transform: translateY(14px) scale(.72) rotate(-6deg); filter: blur(6px) drop-shadow(0 0 0 rgba(215,25,46,0)); } 60% { opacity: 1; transform: translateY(-4px) scale(1.06) rotate(1deg); filter: blur(0) drop-shadow(0 0 28px rgba(227,40,60,.7)); } 100% { transform: none; filter: drop-shadow(0 6px 22px rgba(215,25,46,.45)); } }
+@keyframes coroaBrilho { 0%, 100% { filter: drop-shadow(0 6px 18px rgba(215,25,46,.35)); } 50% { filter: drop-shadow(0 6px 34px rgba(227,40,60,.75)); } }
+.crown-bg { opacity: .07; filter: none; }
+.crown-bg img { width: 100%; height: auto; display: block; filter: drop-shadow(0 0 50px rgba(227,40,60,.5)); }
+.spark img { display: block; width: 26px; height: auto; }
+.bg-equipe { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(180deg, rgba(10,10,11,.55), rgba(10,10,11,.92) 70%), url('../img/equipe.jpg') center 30% / cover no-repeat; opacity: .32; filter: grayscale(1) contrast(1.05); animation: equipeZoom 40s ease-in-out infinite alternate; will-change: transform; }
+@keyframes equipeZoom { from { transform: scale(1); } to { transform: scale(1.06); } }
+@media (max-width: 900px) { .bg-equipe { background-image: linear-gradient(180deg, rgba(10,10,11,.5), rgba(10,10,11,.92) 70%), url('../img/equipe-900.jpg'); } }
+.center-screen { background: radial-gradient(900px 520px at 50% -10%, rgba(58,10,18,.75), rgba(18,6,8,.55) 45%, rgba(5,5,5,.35) 85%); }
+.center-screen ~ * { }
+.side { background: linear-gradient(180deg, rgba(18,18,20,.94), rgba(10,10,11,.96) 75%); backdrop-filter: blur(6px); }
+.card, .kpi, .kcol, .curso, .escola, .topico, .ag-day { background-color: rgba(20,20,22,.9); }
+.kpi.accent { background: linear-gradient(135deg, rgba(215,25,46,.24), rgba(20,20,22,.92) 60%); }
+@media (prefers-reduced-motion: reduce) { .bg-equipe, .crown.anim { animation: none !important; } }
+
+/* ---------- Eventos */
+.evento-tile { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; padding: 16px 20px; border-radius: var(--r); border: 1px solid rgba(227,40,60,.5); background: linear-gradient(110deg, rgba(215,25,46,.28), rgba(20,20,22,.92) 55%); color: #fff; text-decoration: none; position: relative; overflow: hidden; }
+.evento-tile:hover { text-decoration: none; transform: translateY(-1px); box-shadow: 0 12px 30px rgba(215,25,46,.25); }
+.evento-tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.07) 50%, transparent 60%); background-size: 200% 100%; animation: shine 5s ease-in-out infinite; pointer-events: none; }
+.et-txt { display: grid; gap: 2px; } .et-txt strong { letter-spacing: .14em; font-size: 15px; } .et-txt span { color: #e6e6ea; font-size: 13px; }
+.balao { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 50%; background: rgba(215,25,46,.2); border: 1px solid rgba(227,40,60,.55); color: #fff; animation: flutua 3.2s ease-in-out infinite; }
+.balao .ic { stroke-width: 1.5; }
+@keyframes flutua { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-5px) rotate(3deg); } }
+.balao-t { display: inline-grid; vertical-align: -4px; color: var(--accent); }
+.eventos { display: grid; gap: 12px; }
+.evento { display: grid; grid-template-columns: 78px 1fr auto; gap: 18px; align-items: center; }
+.ev-data { display: grid; place-items: center; width: 74px; height: 78px; border-radius: 12px; background: var(--red); color: #fff; font-weight: 800; line-height: 1; }
+.ev-data span { font-size: 30px; } .ev-data small { font-size: 12px; letter-spacing: .12em; margin-top: -10px; }
+.ev-info h3 { font-size: 18px; margin-bottom: 4px; }
+.ev-acao { display: grid; gap: 6px; justify-items: end; }
+.ev-resumo { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: rgba(215,25,46,.1); border: 1px solid rgba(227,40,60,.35); }
+.visitantes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.tbl tr.sel td { background: rgba(215,25,46,.08); }
+@media (max-width: 700px) { .evento { grid-template-columns: 64px 1fr; } .ev-acao { grid-column: 1 / -1; justify-items: start; } .ev-data { width: 62px; height: 66px; } .visitantes { grid-template-columns: 1fr; } .evento-tile { grid-template-columns: auto 1fr; } .et-cta { grid-column: 1 / -1; } }
