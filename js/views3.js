@@ -2,8 +2,9 @@
 import {
   S, esc, brl, brlShort, num, pct, fmtDT, fmtDate, list, firstName, nome, isGestor, isAdmin, minhasEquipes, equipeDe,
   CATEGORIAS_FORUM, papel, respostasDe, statusTopico, projecao, initials, vgv, today,
-} from './core.js?v=9';
-import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=9';
+  vendasDe, vendaStatus, STATUS_VENDA, inP, contatosDe, geral,
+} from './core.js?v=10';
+import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=10';
 
 const autor = (uid, extra = '') => {
   const m = S.members[uid] || {}; const g = ['gestor', 'admin', 'superadmin'].includes(m.role);
@@ -146,3 +147,56 @@ export const metaMesCard = (uids, eu) => {
 export const marcosForm = () => `<form data-form="marcos" class="form-grid"><p class="muted small span2">Defina os valores de VGV validado no mês e o brinde de cada etapa. A coroa sobe até o último valor.</p>
   <div class="span2 marcos-l">${[...marcos(), {}, {}].slice(0, 8).map((m, i) => `<div class="row-a" data-row="marco"><label class="field"><span>VGV do mês (R$)</span><input name="m_valor" type="number" min="0" step="1000" value="${m.valor || ''}"></label><label class="field grow"><span>Brinde</span><input name="m_brinde" value="${esc(m.brinde || '')}" placeholder="Ex.: Brinde, Jantar, Viagem"></label></div>`).join('')}</div>
   <div class="span2 row-a"><button class="btn accent">Salvar brindes</button></div></form>`;
+
+// ---------- Minhas Vendas (lançamento simples: tipo, cliente, grupo, cota, data, valor e contrato)
+export const TIPOS = { imovel: { nome: 'Imóvel', ic: 'home', produto: 'Imobiliário' }, veiculo: { nome: 'Veículo', ic: 'car', produto: 'Veículos' } };
+export const tipoVenda = v => v.tipo || (/im[oó]v|imob/i.test(v.produto || '') ? 'imovel' : /ve[ií]c/i.test(v.produto || '') ? 'veiculo' : 'outro');
+const tipoIc = (t, s = 18) => `<span class="tipo-ic ${t}" title="${TIPOS[t]?.nome || 'Outro'}">${ic(TIPOS[t]?.ic || 'file', s)}</span>`;
+const ativa = v => !['reprovada', 'cancelada'].includes(vendaStatus(v));
+const contratosDe = v => [...(v.contratos || []), ...(v.contrato && !(v.contratos || []).some(c => c.path === v.contrato) ? [{ path: v.contrato, nome: 'Contrato' }] : []), ...(v.comprovante && !(v.contratos || []).some(c => c.path === v.comprovante) ? [{ path: v.comprovante, nome: 'Comprovante' }] : [])];
+export const resumoVendasMes = uids => {
+  const r = mesAtual(); const l = vendasDe(uids).filter(v => inP(v.data, r) && ativa(v));
+  const por = t => { const x = l.filter(v => tipoVenda(v) === t); return { n: x.length, valor: x.reduce((s, v) => s + (Number(v.valor) || 0), 0) }; };
+  return { n: l.length, valor: l.reduce((s, v) => s + (Number(v.valor) || 0), 0), imovel: por('imovel'), veiculo: por('veiculo'), mes: MESES[Number(r.mk.slice(5, 7)) - 1] };
+};
+export const vendidoMesCard = (uids, eu) => {
+  const x = resumoVendasMes(uids);
+  return card(`${ic('cifrao', 18)} Vendido no mês`, `<div class="vend-mes">
+    <div class="vm-total"><span class="muted small">Total vendido em ${x.mes}</span><strong class="big accent-t" data-n="${x.valor}" data-f="brl">${brlShort(x.valor)}</strong><span class="muted small">${num(x.n)} venda(s) · inclui as aguardando validação</span></div>
+    ${['imovel', 'veiculo'].map(t => `<div class="vm-tipo">${tipoIc(t, 26)}<div><span class="muted small">${TIPOS[t].nome}s</span><strong>${brlShort(x[t].valor)}</strong><span class="muted small">${num(x[t].n)} venda(s)</span></div></div>`).join('')}
+  </div>`, `<a href="#minhas-vendas" class="link">${eu ? 'Lançar venda' : 'Ver vendas'}</a>`, 'span2');
+};
+export const minhasVendas = () => {
+  const x = resumoVendasMes([S.uid]);
+  const l = vendasDe([S.uid]).sort((a, b) => (b.data || '').localeCompare(a.data || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const semContrato = l.filter(v => ativa(v) && !contratosDe(v).length).length;
+  const resumo = `<div class="kpis vm-kpis">
+    <div class="kpi accent"><span>Vendido no mês</span><strong>${brlShort(x.valor)}</strong><small>${num(x.n)} venda(s) em ${x.mes}</small></div>
+    ${['imovel', 'veiculo'].map(t => `<div class="kpi"><span>${tipoIc(t, 16)} ${TIPOS[t].nome}s no mês</span><strong>${brlShort(x[t].valor)}</strong><small>${num(x[t].n)} venda(s)</small></div>`).join('')}
+    <div class="kpi ${semContrato ? 'warn' : ''}"><span>${ic('file', 16)} Contratos pendentes</span><strong>${num(semContrato)}</strong><small>${semContrato ? 'Envie para não perder' : 'Todos guardados'}</small></div></div>`;
+  const tabela = l.length ? `<section class="card tablewrap"><table class="tbl vendas-tbl"><thead><tr><th>Tipo</th><th>Data</th><th>Cliente</th><th>Grupo</th><th>Cota</th><th class="r">Valor</th><th>Status</th><th>Contrato</th></tr></thead><tbody>${l.map(v => { const st = vendaStatus(v); const cs = contratosDe(v); const pode = !['validada', 'cancelada'].includes(st);
+    return `<tr><td>${tipoIc(tipoVenda(v))}</td><td>${fmtDate(v.data)}</td><td><strong>${esc(S.contatos[v.contatoId]?.nome || v.clienteNome || '—')}</strong></td><td>${esc(v.grupo || '—')}</td><td>${esc(v.cota || '—')}</td><td class="r"><strong>${brl(Number(v.valor) || 0)}</strong></td><td>${chip(...(STATUS_VENDA[st] || [st]))}</td>
+      <td class="acts">${cs.map(c => `<button class="btn xs" data-act="ver-arquivo" data-id="${esc(c.path)}" title="${esc(c.nome || 'Contrato')}">${ic('file', 13)} Ver</button>`).join('')}<button class="btn xs ${cs.length ? '' : 'accent'}" data-act="enviar-contrato" data-id="${v.id}">${ic('upload', 13)} ${cs.length ? 'Mais' : 'Enviar contrato'}</button>${pode ? `<button class="btn xs" data-act="editar-lancamento" data-id="${v.id}">Editar</button>` : ''}</td></tr>`; }).join('')}</tbody></table></section>`
+    : empty('Nenhuma venda lançada ainda', 'Clique em “Lançar venda” e registre tipo, grupo, cota, data e valor. Aproveite e já anexe o contrato do cliente.');
+  return pageHead(`${ic('cifrao', 28)} Minhas Vendas`, 'Lance suas vendas e guarde os contratos dos clientes em um só lugar.', `<button class="btn accent sm" data-act="lancar-venda">${ic('plus', 16)} Lançar venda</button>`)
+    + resumo + tabela + '<p class="muted small">Os contratos ficam guardados com segurança e não podem ser apagados pelo consultor. Somente você, seu gestor e a administração conseguem abrir.</p>';
+};
+export const lancarVendaForm = (v = {}) => {
+  const t = v.id ? tipoVenda(v) : 'imovel'; const g = geral(); const cs = contatosDe([S.uid]).sort((a, b) => a.nome.localeCompare(b.nome));
+  const cli = S.contatos[v.contatoId]?.nome || v.clienteNome || '';
+  return `<form data-form="lancar" data-id="${v.id || ''}" class="form-grid">
+  <div class="span2 tipo-sel">${['imovel', 'veiculo'].map(k => `<label class="tipo-op"><input type="radio" name="tipo" value="${k}" ${t === k ? 'checked' : ''}><span>${ic(TIPOS[k].ic, 30)}<strong>${TIPOS[k].nome}</strong></span></label>`).join('')}</div>
+  ${field('Nome do cliente *', `<input name="cliente" id="f-cliente" value="${esc(cli)}" required list="dl-clientes" autocomplete="off"><datalist id="dl-clientes">${cs.map(c => `<option value="${esc(c.nome)}">`).join('')}</datalist>`, 'span2')}
+  ${field('Grupo *', inp('grupo', v.grupo, 'required'))}
+  ${field('Cota *', inp('cota', v.cota, 'required'))}
+  ${field('Data da venda *', inp('data', v.data || today(), 'type="date" required'))}
+  ${field('Valor da venda (R$) *', inp('valor', v.valor ? String(v.valor).replace('.', ',') : '', 'required inputmode="decimal" placeholder="Ex.: 250.000,00"'))}
+  ${field('Administradora', g.administradoras?.length ? sel('administradora', ['', ...g.administradoras], v.administradora || '') : inp('administradora', v.administradora), 'span2')}
+  ${field(v.id ? 'Anexar outro contrato (opcional)' : 'Contrato do cliente (PDF ou foto)', '<input type="file" id="f-contrato" name="contrato" accept="application/pdf,image/*">', 'span2')}
+  <p class="muted small span2">A venda aparece na hora em “Vendido no mês”. Para somar no VGV oficial, ela passa pela validação da administração.</p>
+  <div class="span2 row-a"><button class="btn accent">${v.id ? 'Salvar alterações' : 'Lançar venda'}</button></div></form>`;
+};
+export const contratoForm = id => `<form data-form="contrato" data-id="${id}" class="form-grid">
+  ${field('Arquivo do contrato (PDF ou foto, até 25 MB) *', '<input type="file" id="f-contrato" name="contrato" accept="application/pdf,image/*" required>', 'span2')}
+  ${field('Descrição', inp('nomeArq', '', 'placeholder="Ex.: Contrato assinado, aditivo, RG do cliente"'), 'span2')}
+  <div class="span2 row-a"><button class="btn accent">Enviar contrato</button></div></form>`;

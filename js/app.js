@@ -1,9 +1,9 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=9';
-import * as V from './views.js?v=9';
-import * as P from './platform.js?v=9';
-import * as V2 from './views2.js?v=9';
-import * as V3 from './views3.js?v=9';
+import * as C from './core.js?v=10';
+import * as V from './views.js?v=10';
+import * as P from './platform.js?v=10';
+import * as V2 from './views2.js?v=10';
+import * as V3 from './views3.js?v=10';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -63,7 +63,7 @@ function screen() {
   if ((m.status || 'ativo') !== 'ativo') return V.bloqueado();
   if (!S.dataReady) return V.loading('Sincronizando seus dados…');
   if (!prog(S.uid).welcomeDone && role() === 'consultor') return V.boasVindas();
-  const views = { eventos: V3.eventos, forum: V3.forum, resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
+  const views = { 'minhas-vendas': V3.minhasVendas, eventos: V3.eventos, forum: V3.forum, resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
   let v = S.view;
   if (['equipe', 'relatorios'].includes(v) && !isGestor()) v = 'inicio';
   if (v === 'admin' && !isAdmin()) v = 'inicio';
@@ -312,6 +312,9 @@ const ACT = {
   tf: v => { S.sub.tf = v; render(true); },
   'v-tab': v => { S.sub.vTab = v; render(true); },
   'nova-venda': id => abrirVenda({}, id || ''),
+  'lancar-venda': () => modal('Lançar venda', V3.lancarVendaForm(), { wide: true }),
+  'editar-lancamento': id => modal('Editar venda', V3.lancarVendaForm({ id, ...S.vendas[id] }), { wide: true }),
+  'enviar-contrato': id => modal('Enviar contrato', V3.contratoForm(id)),
   'editar-venda': id => abrirVenda(S.vendas[id]),
   'hist-venda': id => modal('Histórico da venda', V.vendaHist(S.vendas[id])),
   preaprovar: id => { const v = S.vendas[id]; run(() => upd('vendas/' + id, { preAprovadaPor: S.uid, preAprovadaAt: nowISO(), historico: hist(v.historico, { status: 'pre_aprovada', by: S.uid, at: nowISO() }) }), 'Venda pré-aprovada').then(() => { admins().forEach(a => notify(a, `Venda de ${nome(v.ownerId)} pré-aprovada aguarda validação`, 'vendas')); audit('Venda pré-aprovada', id); }); },
@@ -501,6 +504,30 @@ const FORM = {
       else await mudarEtapa(S.contatos[c.id], alvo, f.resultado === 'Sem interesse' ? f.obs : '');
     }
     return 'Resultado registrado';
+  },
+  async lancar(f, id, form) {
+    const valor = parseMoney(f.valor); if (!(valor > 0)) throw new Error('Informe o valor da venda.');
+    const tipo = f.tipo === 'veiculo' ? 'veiculo' : 'imovel'; const cli = (f.cliente || '').trim(); if (!cli) throw new Error('Informe o nome do cliente.');
+    const ct = C.contatosDe([S.uid]).find(c => c.nome.trim().toLowerCase() === cli.toLowerCase());
+    const d = { tipo, produto: V3.TIPOS[tipo].produto, clienteNome: cli, contatoId: ct?.id || (id ? S.vendas[id]?.contatoId || '' : ''), grupo: f.grupo.trim(), cota: f.cota.trim(), data: f.data, valor, administradora: f.administradora || '' };
+    const arq = form?.querySelector('#f-contrato')?.files?.[0]; let novo = null;
+    if (arq) { if (!P.temArquivos()) throw new Error('O envio de arquivos não está disponível agora.'); if (arq.size > 25 * 1024 * 1024) throw new Error('O contrato passa de 25 MB.'); novo = { path: await P.enviarArquivo(arq, 'contrato'), nome: arq.name, at: nowISO() }; }
+    if (id) {
+      const v = S.vendas[id]; const patch = { ...d, updatedAt: nowISO() }; if (novo) patch.contratos = [...(v.contratos || []), novo];
+      if (C.vendaStatus(v) === 'devolvida') { patch.reenviadaAt = nowISO(); patch.historico = hist(v.historico, { status: 'registrada', by: S.uid, at: nowISO(), motivo: 'Reenviada após correção' }); }
+      await upd('vendas/' + id, patch); return 'Venda atualizada';
+    }
+    await add('vendas', { ...d, contratos: novo ? [novo] : [], ownerId: S.uid, equipeId: C.equipeDe(S.uid), createdAt: nowISO(), historico: [{ status: 'registrada', by: S.uid, at: nowISO() }] });
+    if (ct) await mudarEtapa(ct, 'venda').catch(() => {});
+    [...gestoresDe(S.uid), ...admins()].forEach(u => notify(u, `${nome(S.uid)} lançou uma venda de ${C.brl(valor)} (${V3.TIPOS[tipo].nome}, grupo ${d.grupo}, cota ${d.cota})`, 'vendas'));
+    return novo ? 'Venda lançada e contrato guardado!' : 'Venda lançada! Lembre de anexar o contrato.';
+  },
+  async contrato(f, id, form) {
+    const v = S.vendas[id]; const arq = form?.querySelector('#f-contrato')?.files?.[0]; if (!v || !arq) throw new Error('Escolha o arquivo do contrato.');
+    if (!P.temArquivos()) throw new Error('O envio de arquivos não está disponível agora.'); if (arq.size > 25 * 1024 * 1024) throw new Error('O contrato passa de 25 MB.');
+    const novo = { path: await P.enviarArquivo(arq, 'contrato'), nome: (f.nomeArq || '').trim() || arq.name, at: nowISO() };
+    await upd('vendas/' + id, { contratos: [...(v.contratos || []), novo] }); audit('Contrato enviado', `${v.clienteNome || ''} · ${novo.nome}`);
+    return 'Contrato guardado com segurança';
   },
   async venda(f, id, form) {
     const valor = parseMoney(f.valor); if (!(valor > 0)) throw new Error('Informe o valor da carta de crédito.');

@@ -6,9 +6,9 @@ import {
   vgv, vgvTotal, vendasValidadas, vgvMensal, contatosDe, ativDe, prospeccoes, followups, reunioesDe, funil, esfriando, prog,
   szDias, szDia, szResumo, cursosPublicados, cursoStatus, cursosObrigatorios, treinamentosConcluidos, certCodigo, niveisCfg,
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
-} from './core.js?v=9';
-import * as V2 from './views2.js?v=9';
-import * as V3 from './views3.js?v=9';
+} from './core.js?v=10';
+import * as V2 from './views2.js?v=10';
+import * as V3 from './views3.js?v=10';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
@@ -46,6 +46,8 @@ const P = {
   rows: '<path d="M3 6h18M3 12h18M3 18h18"/>',
   shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>',
   gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+  car: '<path d="M5 16.5h14M3.5 16.5V12l2-5h13l2 5v4.5H3.5Z"/><path d="M3.5 12h17"/><circle cx="7.5" cy="16.5" r="1.8"/><circle cx="16.5" cy="16.5" r="1.8"/>',
+  cifrao: '<circle cx="12" cy="12" r="9"/><path d="M15 8.8c-.6-.8-1.6-1.3-3-1.3-1.7 0-2.8.9-2.8 2.1 0 3 5.8 1.6 5.8 4.6 0 1.3-1.2 2.3-3 2.3-1.4 0-2.5-.6-3.1-1.5M12 5.8v1.7M12 16.5v1.7"/>',
   balao: '<ellipse cx="12" cy="8.6" rx="6.2" ry="7.1"/><path d="M10.8 15.6 10.2 17h3.6l-.6-1.4"/><path d="M12 17c-1.6 1.4 1.4 2.6-.2 4.6"/><path d="M14 6.3c-.4-.6-1.1-1-2-1-1.1 0-1.9.6-1.9 1.4 0 2 3.9 1.1 3.9 3.1 0 .9-.9 1.5-2 1.5-.9 0-1.6-.4-2-1M12 4.3v1M12 11.3v1"/>',
 };
 export const ic = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
@@ -128,6 +130,7 @@ export const boasVindas = () => `<div class="center-screen welcome"><form class=
 export const NAV = () => {
   const n = [
     ['inicio', 'Início', 'home'],
+    ['minhas-vendas', 'Minhas Vendas', 'cifrao'],
     ['resumo', 'Resumo da semana', 'chart'],
     ...(!szResumo(S.uid).concluida && szDias().length ? [['semana-zero', 'Semana Zero', 'flag']] : []),
     ['academy', 'Academy', 'book'],
@@ -243,7 +246,7 @@ export const inicio = () => {
   const dAt = desafioAtivoV(); const desafioHtml = dAt.length ? card('Desafio da semana', dAt.map(d => V2.desafioCard(d, eu ? [S.uid] : uids)).join(''), '<a href="#conquistas" class="link">Ver todos</a>', 'span2') : '';
   const grafico = card('Evolução mensal do VGV validado', barChart(vgvMensal(uids, 6)), '<span class="muted small">últimos 6 meses</span>') + card('Funil da carteira', funilChart(uids));
   const conq = eu ? (() => { const c = conquistasDe(S.uid).filter(x => x.ok); return card('Conquistas', c.length ? `<div class="medals sm">${c.slice(-6).map(x => `<span class="medal on">${ic('medal', 20)}<small>${esc(x.nome)}</small></span>`).join('')}</div>` : empty('Primeira conquista à vista', 'Conclua a Semana Zero para ganhar sua primeira medalha.'), '<a href="#conquistas" class="link">Ver todas</a>', 'span2'); })() : '';
-  return `${V3.eventosTile()}${filtroBar()}${kpis}<div class="grid2">${V3.metaMesCard(uids, eu)}${linha2}${linha3}${desafioHtml}${grafico}${linha5}${conq}</div>`;
+  return `${V3.eventosTile()}${filtroBar()}${kpis}<div class="grid2">${V3.vendidoMesCard(uids, eu)}${V3.metaMesCard(uids, eu)}${linha2}${linha3}${desafioHtml}${grafico}${linha5}${conq}</div>`;
 };
 const nowISOsafe = () => new Date().toISOString();
 
