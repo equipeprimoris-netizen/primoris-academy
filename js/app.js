@@ -1,9 +1,9 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js';
-import * as V from './views.js';
-import * as P from './platform.js';
-import * as V2 from './views2.js';
-import * as V3 from './views3.js';
+import * as C from './core.js?v=6';
+import * as V from './views.js?v=6';
+import * as P from './platform.js?v=6';
+import * as V2 from './views2.js?v=6';
+import * as V3 from './views3.js?v=6';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
