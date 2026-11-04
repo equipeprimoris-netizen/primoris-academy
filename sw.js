@@ -1,5 +1,5 @@
 // Primoris Academy — service worker: abertura rápida (cache do app) e notificações push.
-const VERSAO = 'primoris-v5';
+const VERSAO = 'primoris-v6';
 const APP = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/core.js', 'js/views.js', 'js/platform.js', 'js/views2.js', 'js/views3.js', 'manifest.webmanifest', 'icons/icon-192.png'];
 
 self.addEventListener('install', e => {
@@ -19,7 +19,7 @@ self.addEventListener('fetch', e => {
   if (externo && !/jsdelivr|gstatic|googleapis/.test(url.hostname)) return;
   const p = caches.open(VERSAO).then(async c => {
     const salvo = await c.match(e.request, { ignoreSearch: !externo });
-    const rede = (externo && salvo) ? null : fetch(externo ? e.request : new Request(e.request, { cache: 'no-cache' })).then(r => { if (r.ok || r.type === 'opaque') c.put(e.request, r.clone()); return r; });
+    const rede = (externo && salvo) ? null : fetch(externo ? e.request : e.request.url, externo ? undefined : { cache: 'no-cache', credentials: 'same-origin' }).then(r => { if (r.ok || r.type === 'opaque') c.put(e.request, r.clone()); return r; });
     return { salvo, rede };
   });
   e.respondWith(p.then(x => x.salvo || x.rede));
