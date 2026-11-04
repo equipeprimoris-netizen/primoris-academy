@@ -1,9 +1,9 @@
 // Primoris Academy — service worker: abertura rápida (cache do app) e notificações push.
-const VERSAO = 'primoris-v4';
+const VERSAO = 'primoris-v5';
 const APP = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/core.js', 'js/views.js', 'js/platform.js', 'js/views2.js', 'js/views3.js', 'manifest.webmanifest', 'icons/icon-192.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSAO).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSAO).then(c => c.addAll(APP.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSAO).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -19,7 +19,7 @@ self.addEventListener('fetch', e => {
   if (externo && !/jsdelivr|gstatic|googleapis/.test(url.hostname)) return;
   const p = caches.open(VERSAO).then(async c => {
     const salvo = await c.match(e.request, { ignoreSearch: !externo });
-    const rede = (externo && salvo) ? null : fetch(e.request).then(r => { if (r.ok || r.type === 'opaque') c.put(e.request, r.clone()); return r; });
+    const rede = (externo && salvo) ? null : fetch(externo ? e.request : new Request(e.request, { cache: 'no-cache' })).then(r => { if (r.ok || r.type === 'opaque') c.put(e.request, r.clone()); return r; });
     return { salvo, rede };
   });
   e.respondWith(p.then(x => x.salvo || x.rede));
