@@ -705,3 +705,49 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .hub-body, .hub-resumo, .hub-tabs { min-width: 0; max-width: 100%; }
 .hub-body { display: grid; gap: 18px; align-content: start; }
 #view > * { min-width: 0; }
+
+/* ---------- Biblioteca Primoris: ferramentas */
+.bib-body { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.bib-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.bib-tool small { line-height: 1.45; }
+.bib-panel { display: grid; gap: 16px; }
+.bib-head { display: flex; gap: 14px; align-items: center; }
+.bib-head h3 { margin: 0; font-size: 20px; }
+.bib-head p { margin: 2px 0 0; }
+.bib-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.bib-row > input { flex: 1 1 320px; min-width: 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; }
+.bib-row > input:focus { outline: none; border-color: var(--accent); }
+.bib-row .btn { padding: 11px 18px; }
+.bib-c { justify-content: center; }
+.bib-msg { margin: 0; font-size: 14px; }
+.bib-msg.ok { color: var(--ok); } .bib-msg.bad { color: #f0a5a3; }
+.bib-spin { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; display: inline-block; animation: bibGira .7s linear infinite; }
+@keyframes bibGira { to { transform: rotate(360deg); } }
+.bib-midias { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.bib-midia { display: grid; gap: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
+.bib-thumb { position: relative; aspect-ratio: 4/5; border-radius: 8px; overflow: hidden; background: #000; }
+.bib-thumb img, .bib-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bib-badge { position: absolute; top: 8px; left: 8px; padding: 3px 9px; border-radius: 999px; background: rgba(0,0,0,.72); font-size: 12px; font-weight: 600; }
+.bib-legenda { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; max-height: 160px; overflow: auto; }
+.bib-legenda p { margin: 4px 0 0; font-size: 14px; }
+.bib-passos { counter-reset: bp; list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bib-passos li { counter-increment: bp; position: relative; padding: 11px 14px 11px 50px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+.bib-passos li::before { content: counter(bp); position: absolute; left: 13px; top: 10px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--red); color: #fff; font-weight: 800; font-size: 13px; }
+.bib-passos code { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+.bib-feat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.bib-feat div { display: grid; gap: 2px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; font-size: 14px; }
+.bib-feat span { color: var(--text-2); }
+.bib-duas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.bib-drop { position: relative; height: clamp(240px, 40vh, 380px); display: grid; place-items: center; text-align: center; border: 2px dashed rgba(227,40,60,.45); border-radius: 14px; background: var(--surface-2); cursor: pointer; overflow: hidden; transition: border-color .15s, background .15s; }
+.bib-drop:hover, .bib-drop.over { border-color: var(--accent); background: rgba(215,25,46,.08); }
+.bib-drop.has { border-style: solid; }
+.bib-drop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.bib-ph { display: grid; gap: 6px; justify-items: center; padding: 18px; color: var(--text-2); }
+.bib-ph strong { color: #fff; font-size: 16px; }
+.bib-ph .ic { color: var(--accent); }
+.bib-lbl { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 4px 10px; border-radius: 999px; background: rgba(0,0,0,.75); color: #fff; font-size: 12px; font-weight: 700; }
+.bib-x { position: absolute; top: 8px; right: 8px; z-index: 2; width: 30px; height: 30px; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(0,0,0,.75); color: #fff; cursor: pointer; }
+.bib-result { display: grid; gap: 12px; }
+.bib-result img { max-width: 100%; max-height: 70vh; margin: 0 auto; border-radius: 14px; border: 1px solid rgba(227,40,60,.5); box-shadow: 0 14px 40px rgba(215,25,46,.2); }
+@media (max-width: 1100px) { .bib-grid, .bib-feat { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .bib-grid, .bib-feat, .bib-duas { grid-template-columns: 1fr; } }

@@ -4,9 +4,9 @@ import {
   CATEGORIAS_FORUM, papel, respostasDe, statusTopico, projecao, initials, vgv, today,
   vendasDe, vendaStatus, STATUS_VENDA, inP, contatosDe, geral,
   proxNivel, nivelNome, conquistasDe, vgvTotal, atrasados,
-} from './core.js?v=18';
-import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=18';
-import * as V from './views.js?v=18';
+} from './core.js?v=19';
+import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=19';
+import * as V from './views.js?v=19';
 
 const autor = (uid, extra = '') => {
   const m = S.members[uid] || {}; const g = ['gestor', 'admin', 'superadmin'].includes(m.role);
@@ -245,6 +245,5 @@ export const carteiraHub = () => {
   return head + resumo + hubTabs('carteira', tabs, tab) + `<div class="hub-body">${body}</div>`;
 };
 
-// ---------- Biblioteca Primoris (novas funcionalidades entram aqui)
-export const biblioteca = () => pageHead(`<span class="bib-t">${ic('book', 30)}</span> Biblioteca Primoris`, 'O acervo exclusivo da Primoris: materiais, ferramentas e conteúdos para acelerar seus resultados.')
-  + `<section class="bib-hero card"><div class="bib-coroa"><img src="img/coroa-240.webp" width="120" height="86" alt=""></div><div><h3>Em construção</h3><p class="muted">Esta área está sendo preparada. Em breve as novas funcionalidades da Biblioteca Primoris vão aparecer aqui.</p></div></section>`;
+// ---------- Biblioteca Primoris: as ferramentas ficam em biblioteca.js
+export { biblioteca } from './biblioteca.js?v=19';
