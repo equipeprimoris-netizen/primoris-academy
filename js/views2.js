@@ -4,8 +4,8 @@ import {
   ETAPAS, etapaNome, isAdmin, isGestor, nome, nivelNome, ativos, minhasEquipes, membrosDaEquipe, escopoUids, periodo,
   vgv, vendasValidadas, resumoSemana, comissaoVenda, comissoesDoMes, regrasComissao, pagamento, desafios, desafioAtivo,
   desafioProgresso, INDICADORES, diagnostico, geral, szResumo, equipeDe, niveisCfg,
-} from './core.js?v=16';
-import { ic, chip, bar, card, kpi, empty, field, inp, sel, txt, opt, pageHead, barChart } from './views.js?v=16';
+} from './core.js?v=17';
+import { ic, chip, bar, card, kpi, empty, field, inp, sel, txt, opt, pageHead, barChart } from './views.js?v=17';
 
 // ---------- Resumo da semana
 const delta = (a, b) => { if (!b && !a) return ''; if (!b) return chip('novo', 'ok'); const d = Math.round(((a - b) / b) * 100); return chip((d >= 0 ? '+' : '') + d + '%', d >= 0 ? 'ok' : 'bad'); };

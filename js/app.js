@@ -1,9 +1,9 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=16';
-import * as V from './views.js?v=16';
-import * as P from './platform.js?v=16';
-import * as V2 from './views2.js?v=16';
-import * as V3 from './views3.js?v=16';
+import * as C from './core.js?v=17';
+import * as V from './views.js?v=17';
+import * as P from './platform.js?v=17';
+import * as V2 from './views2.js?v=17';
+import * as V3 from './views3.js?v=17';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -65,6 +65,7 @@ function render(force = false) {
 }
 function screen() {
   if (S.fatal) return V.fatal(S.fatal);
+  if (S.login) return V.login();
   if (!S.ready || !S.membersLoaded) return V.loading();
   const m = me();
   if (!m) return V.solicitarAcesso();
@@ -163,10 +164,10 @@ async function boot() {
   const t = setTimeout(() => { if (!S.db && !S.login) { S.fatal = 'Não foi possível conectar. Verifique sua internet e recarregue a página.'; render(true); } }, 15000);
   let session = null;
   try { session = await P.init(); } catch (e) { console.error(e); clearTimeout(t); S.fatal = 'Não foi possível conectar. Verifique sua internet e recarregue a página.'; return render(true); }
-  if (!session) { clearTimeout(t); S.login = true; $app.innerHTML = V.login(); return; }
+  if (!session) { clearTimeout(t); S.login = true; return render(true); }
   const [db, user] = await Promise.all([P.use('db'), P.use('user')]);
   clearTimeout(t);
-  if (!db || !user) { S.login = true; $app.innerHTML = V.login(); return; }
+  if (!db || !user) { S.login = true; return render(true); }
   S.db = db; S.user = user;
   const [uid, owner, editor, cw, profile] = await Promise.all([user.id(), Promise.resolve(user.isOwner?.()), Promise.resolve(user.canEdit?.()), Promise.resolve(user.can?.('data.write')), user.me().catch(() => null)]);
   S.uid = uid;
