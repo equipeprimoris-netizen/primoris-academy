@@ -25,6 +25,9 @@ export async function init() {
 }
 export const entrarComGoogle = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: 'select_account' } } });
 export const sair = () => sb.auth.signOut();
+// Token da sessão (para chamar as funções do servidor em nome do usuário logado)
+export const token = () => session?.access_token || null;
+export const chavePublica = CFG.key;
 
 // ---------- Banco
 const erro = e => ({ code: /42501|row-level|permission/i.test(`${e?.code} ${e?.message}`) || e?.code === 'P0002' ? 'invalid_argument' : 'unavailable', message: e?.message || 'Erro de rede' });
