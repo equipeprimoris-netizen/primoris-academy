@@ -665,3 +665,43 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .sp-mini { position: absolute; top: 50%; left: 0; transform: translate(-50%, -58%); animation: spMini 10s linear var(--d, 0ms) forwards; }
 .sp-mini img { width: 30px; height: auto; display: block; filter: drop-shadow(0 0 8px rgba(255,60,80,.95)); animation: mmFlutua 1.2s ease-in-out infinite; }
 @keyframes spMini { to { left: 100%; } }
+
+/* ---------- Hubs (Minha Jornada / Carteira & Vendas) */
+.hub-tabs { display: flex; gap: 6px; margin: 4px 0 18px; padding: 5px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.hub-tabs::-webkit-scrollbar { display: none; }
+.hub-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; border: 0; background: transparent; color: var(--text-2, #c9c9cf); font-weight: 600; white-space: nowrap; cursor: pointer; transition: background .2s var(--ease), color .2s; }
+.hub-tabs button:hover { background: rgba(255,255,255,.06); color: #fff; }
+.hub-tabs button.on { background: var(--red); color: #fff; box-shadow: 0 6px 18px rgba(215,25,46,.35); }
+.hub-n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #fff; color: var(--red); font-size: 11px; display: inline-grid; place-items: center; }
+.hub-body > .ph h2.display { font-size: 22px; }
+.hub-body > .ph { margin-top: 0; }
+.hub-resumo { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.hub-resumo button { display: grid; gap: 4px; text-align: left; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border); background: rgba(20,20,22,.9); color: #fff; cursor: pointer; transition: border-color .2s, transform .2s var(--ease); }
+.hub-resumo button:hover { border-color: rgba(227,40,60,.6); transform: translateY(-1px); }
+.hub-resumo button strong { font-size: 20px; } .hub-resumo button.alerta { border-color: rgba(240,180,40,.55); }
+.hub-resumo .ic { vertical-align: -2px; }
+.jt-intro { max-width: 760px; margin-bottom: 14px; }
+.jt-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; counter-reset: jt; }
+.jt { position: relative; display: grid; gap: 8px; align-content: start; text-align: left; color: #fff; cursor: pointer; padding: 20px; border: 1px solid var(--border); transition: border-color .2s, transform .25s var(--ease), box-shadow .25s; }
+.jt:hover { border-color: rgba(227,40,60,.7); transform: translateY(-3px); box-shadow: 0 14px 34px rgba(215,25,46,.18); }
+.jt-n { position: absolute; top: 14px; right: 16px; font-family: Cinzel, serif; font-size: 30px; color: rgba(255,255,255,.08); }
+.jt-ic { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: rgba(215,25,46,.18); border: 1px solid rgba(227,40,60,.45); color: #fff; }
+.jt-t { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2, #c9c9cf); }
+.jt strong { font-size: 22px; line-height: 1.15; } .jt strong small { font-size: 13px; font-weight: 500; }
+.jt-go { display: inline-flex; gap: 6px; align-items: center; margin-top: 4px; color: var(--accent); font-weight: 700; font-size: 13px; }
+.warn-t { color: #f0b428; font-weight: 600; }
+@media (max-width: 1100px) { .jt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hub-resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .jt-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Biblioteca Primoris (menu em destaque, cor invertida) */
+.side nav a.nav-bib { margin: 6px 0 8px; background: linear-gradient(135deg, #ffffff, #e9e9ee); color: #0A0A0B; font-weight: 800; letter-spacing: .02em; box-shadow: 0 6px 20px rgba(255,255,255,.12); }
+.side nav a.nav-bib .ic { color: var(--red); }
+.side nav a.nav-bib:hover { background: #fff; }
+.side nav a.nav-bib.on { background: #fff; color: var(--red); box-shadow: inset 3px 0 0 var(--red), 0 0 0 1px var(--red), 0 8px 24px rgba(215,25,46,.35); }
+.bib-t { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: #fff; color: var(--red); vertical-align: -10px; margin-right: 6px; }
+.bib-hero { display: flex; gap: 24px; align-items: center; padding: 28px; border: 1px solid rgba(255,255,255,.25); background: linear-gradient(120deg, rgba(255,255,255,.08), rgba(20,20,22,.92) 60%); }
+.bib-coroa img { width: 110px; height: auto; filter: drop-shadow(0 6px 22px rgba(215,25,46,.5)); animation: coroaBrilho 3.2s ease-in-out infinite; }
+@media (max-width: 560px) { .bib-hero { flex-direction: column; text-align: center; } }
+.hub-body, .hub-resumo, .hub-tabs { min-width: 0; max-width: 100%; }
+.hub-body { display: grid; gap: 18px; align-content: start; }
+#view > * { min-width: 0; }

@@ -6,9 +6,9 @@ import {
   vgv, vgvTotal, vendasValidadas, vgvMensal, contatosDe, ativDe, prospeccoes, followups, reunioesDe, funil, esfriando, prog,
   szDias, szDia, szResumo, cursosPublicados, cursoStatus, cursosObrigatorios, treinamentosConcluidos, certCodigo, niveisCfg,
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
-} from './core.js?v=17';
-import * as V2 from './views2.js?v=17';
-import * as V3 from './views3.js?v=17';
+} from './core.js?v=18';
+import * as V2 from './views2.js?v=18';
+import * as V3 from './views3.js?v=18';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
@@ -130,18 +130,15 @@ export const boasVindas = () => `<div class="center-screen welcome"><form class=
 export const NAV = () => {
   const n = [
     ['inicio', 'Início', 'home'],
-    ['minhas-vendas', 'Minhas Vendas', 'cifrao'],
+    ['biblioteca', 'Biblioteca Primoris', 'book', 'bib'],
+    ['jornada', 'Minha Jornada', 'stairs'],
+    ['carteira', 'Carteira & Vendas', 'users'],
+    ['agenda', 'Agenda', 'calendar'],
     ['resumo', 'Resumo da semana', 'chart'],
     ...(!szResumo(S.uid).concluida && szDias().length ? [['semana-zero', 'Semana Zero', 'flag']] : []),
     ['academy', 'Academy', 'book'],
     ['forum', 'Fórum', 'msg'],
     ['eventos', 'Eventos', 'balao'],
-    ['carteira', 'Minha Carteira', 'users'],
-    ['agenda', 'Agenda', 'calendar'],
-    ['plano', 'Plano de Ação', 'checksq'],
-    ['vendas', 'Meu Primeiro Milhão', 'coins'],
-    ['carreira', 'Minha Evolução', 'stairs'],
-    ['conquistas', 'Conquistas', 'medal'],
   ];
   if (szResumo(S.uid).concluida) n.splice(1, 0); // Semana Zero sai do menu após a conclusão
   if (isGestor()) n.push(['equipe', 'Minha Equipe', 'team'], ['relatorios', 'Relatórios', 'chart']);
@@ -157,7 +154,7 @@ export const shell = content => {
   return `<div class="app">
   <aside class="side" id="side">
     <div class="side-brand"><span class="mark">${crown(26)}</span><div><strong>PRIMORIS</strong><small>ACADEMY</small></div></div>
-    <nav>${nav.map(([id, l, i]) => `<a href="#${id}" class="${S.view === id ? 'on' : ''}">${ic(i)}<span>${l}</span>${id === 'admin' && pend ? `<em class="badge">${pend}</em>` : ''}</a>`).join('')}</nav>
+    <nav>${nav.map(([id, l, i, x]) => `<a href="#${id}" class="${S.view === id ? 'on' : ''} ${x ? 'nav-' + x : ''}">${ic(i)}<span>${l}</span>${id === 'admin' && pend ? `<em class="badge">${pend}</em>` : ''}</a>`).join('')}</nav>
     <a class="wa-grupo" href="https://chat.whatsapp.com/Ds8L37GWUHyBvAFvxwFAM2" target="_blank" rel="noopener">${WA_ICON}<span>Grupo Primoris no WhatsApp</span></a>${S.installPrompt ? `<button class="install" data-act="instalar">${ic('download', 16)} Instalar app</button>` : ''}<div class="side-foot"><span class="muted small">${esc(ROLES[role()])}</span><button class="linkbtn small" data-act="sair">Sair</button></div>
   </aside>
   <div class="main">
@@ -456,8 +453,8 @@ export const tarefaForm = (x = {}) => {
 };
 
 // ---------- VENDAS / MEU PRIMEIRO MILHÃO
-export const vendas = () => {
-  const tab = S.sub.vTab || 'milhao'; const mm = geral().metaMilhao; const tot = vgvTotal(S.uid); const minhas = vendasDe([S.uid]);
+export const vendas = (forcar) => {
+  const tab = forcar || S.sub.vTab || 'milhao'; const mm = geral().metaMilhao; const tot = vgvTotal(S.uid); const minhas = vendasDe([S.uid]);
   const valid = vendasValidadas([S.uid]); const ticket = valid.length ? tot / valid.length : 0; const pend = vgv([S.uid], null, 'pendente');
   const tabs = `<div class="tabs">${[['milhao', 'Meu Primeiro Milhão'], ['minhas', 'Minhas vendas'], ['comissoes', 'Comissões'], ['simulador', 'Simulador'], ...(isGestor() ? [['fila', 'Fila de validação']] : [])].map(([v, l]) => `<button class="${tab === v ? 'on' : ''}" data-act="v-tab" data-id="${v}">${l}</button>`).join('')}</div>`;
   let body = '';
@@ -493,6 +490,7 @@ export const vendas = () => {
       <section class="card tablewrap"><header class="card-h"><h3>Decididas recentemente</h3></header>${outras.length ? `<table class="tbl"><tbody>${outras.map(row).join('')}</tbody></table>` : '<p class="muted">Nada ainda.</p>'}</section>
       ${!isAdmin() ? '<p class="muted small">Como gestor, você pré-aprova. A validação oficial, que conta no VGV, é feita pela administração.</p>' : ''}`;
   }
+  if (forcar) return pageHead({ milhao: 'Meu Primeiro Milhão', comissoes: 'Comissões', simulador: 'Simulador de comissão', fila: 'Validação de vendas' }[tab] || '', tab === 'milhao' ? 'Só vendas validadas contam para o VGV oficial, metas, ranking e carreira.' : '') + body;
   return pageHead('Meu Primeiro Milhão', 'Só vendas validadas contam para o VGV oficial, metas, ranking e carreira.', `<button class="btn accent sm" data-act="nova-venda">${ic('plus', 16)} Registrar venda</button>`) + tabs + body;
 };
 export const simCalc = f => {

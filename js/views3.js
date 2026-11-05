@@ -3,8 +3,10 @@ import {
   S, esc, brl, brlShort, num, pct, fmtDT, fmtDate, list, firstName, nome, isGestor, isAdmin, minhasEquipes, equipeDe,
   CATEGORIAS_FORUM, papel, respostasDe, statusTopico, projecao, initials, vgv, today,
   vendasDe, vendaStatus, STATUS_VENDA, inP, contatosDe, geral,
-} from './core.js?v=17';
-import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=17';
+  proxNivel, nivelNome, conquistasDe, vgvTotal, atrasados,
+} from './core.js?v=18';
+import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=18';
+import * as V from './views.js?v=18';
 
 const autor = (uid, extra = '') => {
   const m = S.members[uid] || {}; const g = ['gestor', 'admin', 'superadmin'].includes(m.role);
@@ -200,3 +202,49 @@ export const contratoForm = id => `<form data-form="contrato" data-id="${id}" cl
   ${field('Arquivo do contrato (PDF ou foto, até 25 MB) *', '<input type="file" id="f-contrato" name="contrato" accept="application/pdf,image/*" required>', 'span2')}
   ${field('Descrição', inp('nomeArq', '', 'placeholder="Ex.: Contrato assinado, aditivo, RG do cliente"'), 'span2')}
   <div class="span2 row-a"><button class="btn accent">Enviar contrato</button></div></form>`;
+
+// ---------- Hubs: Minha Jornada e Carteira & Vendas (menus unificados)
+const hubTabs = (chave, tabs, atual) => `<div class="hub-tabs" role="tablist">${tabs.map(([id, l, i, n]) => `<button role="tab" aria-selected="${atual === id}" class="${atual === id ? 'on' : ''}" data-act="hub-tab" data-id="${chave}:${id}">${ic(i, 17)}<span>${l}</span>${n ? `<b class="hub-n">${n}</b>` : ''}</button>`).join('')}</div>`;
+export const JORNADA_TABS = ['visao', 'plano', 'milhao', 'carreira', 'conquistas'];
+export const jornada = () => {
+  const tab = JORNADA_TABS.includes(S.sub.jTab) ? S.sub.jTab : 'visao';
+  const t = today(); const abertas = list(S.tarefas).filter(x => x.ownerId === S.uid && x.status === 'aberta'); const atras = abertas.filter(x => x.prazo && x.prazo < t).length;
+  const mm = geral().metaMilhao || 1000000; const tot = vgvTotal(S.uid); const pn = proxNivel(S.uid); const cq = conquistasDe(S.uid); const ganhas = cq.filter(x => x.ok).length;
+  const tabs = [['visao', 'Visão geral', 'home'], ['plano', 'Plano de Ação', 'checksq', atras || ''], ['milhao', 'Primeiro Milhão', 'coins'], ['carreira', 'Evolução', 'stairs'], ['conquistas', 'Conquistas', 'medal']];
+  const head = pageHead(`${ic('stairs', 28)} Minha Jornada`, 'Seu caminho na Primoris em um só lugar: o que fazer hoje, quanto falta para o primeiro milhão, seu nível de carreira e suas medalhas.');
+  let body;
+  if (tab === 'visao') {
+    const passo = (n, titulo, tb, ico, valor, detalhe, barra) => `<button class="jt card" data-act="hub-tab" data-id="jornada:${tb}"><span class="jt-n">${n}</span><span class="jt-ic">${ic(ico, 24)}</span><span class="jt-t">${titulo}</span><strong>${valor}</strong>${barra != null ? bar(barra, true) : ''}<small class="muted">${detalhe}</small><span class="jt-go">Abrir ${ic('arrow', 14)}</span></button>`;
+    body = `<p class="muted jt-intro">Siga a ordem: as <strong>tarefas do dia</strong> geram vendas, as <strong>vendas</strong> levam ao primeiro milhão, e o milhão, junto com os requisitos, sobe o seu <strong>nível de carreira</strong>. Cada passo rende <strong>conquistas</strong>.</p>
+    <div class="jt-grid">
+      ${passo(1, 'Plano de Ação', 'plano', 'checksq', `${num(abertas.length)} tarefa(s) aberta(s)`, atras ? `<span class="warn-t">${atras} atrasada(s)</span>` : 'Nenhuma atrasada', null)}
+      ${passo(2, 'Meu Primeiro Milhão', 'milhao', 'coins', brlShort(tot) + ' <small class="muted">de ' + brlShort(mm) + '</small>', `${pct(tot, mm)}% do caminho · VGV validado`, pct(tot, mm))}
+      ${passo(3, 'Evolução de carreira', 'carreira', 'stairs', esc(nivelNome(S.members[S.uid]?.nivel)), pn ? `Próximo: ${esc(pn.nome)}${pn.definido ? ` · ${pn.feitos} de ${pn.total} requisitos` : ''}` : 'Topo da carreira', pn?.definido ? pn.pct : null)}
+      ${passo(4, 'Conquistas', 'conquistas', 'medal', `${ganhas} de ${cq.length} medalhas`, 'Ranking do mês, desafios e mural', pct(ganhas, cq.length))}
+    </div>`;
+  } else if (tab === 'plano') body = V.plano();
+  else if (tab === 'milhao') body = V.vendas('milhao');
+  else if (tab === 'carreira') body = V.carreira();
+  else body = V.conquistas();
+  return head + hubTabs('jornada', tabs, tab) + `<div class="hub-body">${body}</div>`;
+};
+export const CARTEIRA_TABS = ['clientes', 'vendas', 'comissoes', 'simulador', 'fila'];
+export const carteiraHub = () => {
+  let tab = CARTEIRA_TABS.includes(S.sub.cTab) ? S.sub.cTab : 'clientes'; if (tab === 'fila' && !isGestor()) tab = 'clientes';
+  const cs = contatosDe([S.uid]); const x = resumoVendasMes([S.uid]);
+  const semContrato = vendasDe([S.uid]).filter(v => !['reprovada', 'cancelada'].includes(vendaStatus(v)) && !(v.contratos || []).length && !v.contrato && !v.comprovante).length;
+  const fila = isGestor() ? list(S.vendas).filter(v => ['registrada', 'pre_aprovada', 'em_analise'].includes(vendaStatus(v))).length : 0;
+  const tabs = [['clientes', 'Clientes', 'users', ''], ['vendas', 'Vendas e contratos', 'cifrao', semContrato || ''], ['comissoes', 'Comissões', 'coins'], ['simulador', 'Simulador', 'chart'], ...(isGestor() ? [['fila', 'Validação', 'check', fila || '']] : [])];
+  const resumo = `<div class="hub-resumo">
+    <button data-act="hub-tab" data-id="carteira:clientes"><span class="muted small">Clientes na carteira</span><strong>${num(cs.length)}</strong></button>
+    <button data-act="hub-tab" data-id="carteira:vendas"><span class="muted small">Vendido em ${x.mes}</span><strong class="accent-t">${brlShort(x.valor)}</strong></button>
+    <button data-act="hub-tab" data-id="carteira:vendas"><span class="muted small">${ic('home', 13)} Imóveis · ${ic('car', 13)} Veículos</span><strong>${brlShort(x.imovel.valor)} · ${brlShort(x.veiculo.valor)}</strong></button>
+    <button data-act="hub-tab" data-id="carteira:vendas" class="${semContrato ? 'alerta' : ''}"><span class="muted small">Contratos pendentes</span><strong>${num(semContrato)}</strong></button></div>`;
+  const head = pageHead(`${ic('users', 28)} Carteira & Vendas`, 'Do primeiro contato ao contrato guardado: seus clientes, suas vendas e suas comissões.');
+  const body = tab === 'clientes' ? V.carteira() : tab === 'vendas' ? minhasVendas() : V.vendas(tab);
+  return head + resumo + hubTabs('carteira', tabs, tab) + `<div class="hub-body">${body}</div>`;
+};
+
+// ---------- Biblioteca Primoris (novas funcionalidades entram aqui)
+export const biblioteca = () => pageHead(`<span class="bib-t">${ic('book', 30)}</span> Biblioteca Primoris`, 'O acervo exclusivo da Primoris: materiais, ferramentas e conteúdos para acelerar seus resultados.')
+  + `<section class="bib-hero card"><div class="bib-coroa"><img src="img/coroa-240.webp" width="120" height="86" alt=""></div><div><h3>Em construção</h3><p class="muted">Esta área está sendo preparada. Em breve as novas funcionalidades da Biblioteca Primoris vão aparecer aqui.</p></div></section>`;

@@ -1,9 +1,9 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=17';
-import * as V from './views.js?v=17';
-import * as P from './platform.js?v=17';
-import * as V2 from './views2.js?v=17';
-import * as V3 from './views3.js?v=17';
+import * as C from './core.js?v=18';
+import * as V from './views.js?v=18';
+import * as P from './platform.js?v=18';
+import * as V2 from './views2.js?v=18';
+import * as V3 from './views3.js?v=18';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -72,7 +72,7 @@ function screen() {
   if ((m.status || 'ativo') !== 'ativo') return V.bloqueado();
   if (!S.dataReady) return V.loading('Sincronizando seus dados…');
   if (!prog(S.uid).welcomeDone && role() === 'consultor') return V.boasVindas();
-  const views = { 'minhas-vendas': V3.minhasVendas, eventos: V3.eventos, forum: V3.forum, resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V.carteira, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
+  const views = { jornada: V3.jornada, biblioteca: V3.biblioteca, 'minhas-vendas': V3.minhasVendas, eventos: V3.eventos, forum: V3.forum, resumo: V2.resumo, inicio: V.inicio, 'semana-zero': () => V.semanaZero(), academy: V.academy, carteira: V3.carteiraHub, agenda: V.agenda, plano: V.plano, vendas: V.vendas, carreira: () => V.carreira(), conquistas: V.conquistas, equipe: V.equipe, relatorios: V.relatorios, admin: V.admin };
   let v = S.view;
   if (['equipe', 'relatorios'].includes(v) && !isGestor()) v = 'inicio';
   if (v === 'admin' && !isAdmin()) v = 'inicio';
@@ -105,8 +105,10 @@ function afterRender() {
 document.addEventListener('focusout', () => setTimeout(() => { if (deferred && !editing()) render(); }, 0));
 
 // ---------- Rotas
+const ALIAS = { plano: ['jornada', 'jTab', 'plano'], vendas: ['jornada', 'jTab', 'milhao'], carreira: ['jornada', 'jTab', 'carreira'], conquistas: ['jornada', 'jTab', 'conquistas'], 'minhas-vendas': ['carteira', 'cTab', 'vendas'], comissoes: ['carteira', 'cTab', 'comissoes'] };
 function route() {
-  const h = (location.hash || '#inicio').slice(1) || 'inicio';
+  let h = (location.hash || '#inicio').slice(1) || 'inicio';
+  if (ALIAS[h]) { const [dest, k, t] = ALIAS[h]; S.sub[k] = t; history.replaceState(null, '', '#' + dest); h = dest; }
   S.animNext = true;
   if (h !== S.view) { S.view = h; if (h !== 'academy') S.sub.curso = null; if (h !== 'equipe') S.sub.perfil = null; S.sub.szDia = null; window.scrollTo(0, 0); }
   document.getElementById('side')?.classList.remove('open');
@@ -320,6 +322,7 @@ const ACT = {
   'nova-tarefa': uid => modal('Nova tarefa', V.tarefaForm(uid ? { ownerId: uid } : {})),
   tf: v => { S.sub.tf = v; render(true); },
   'v-tab': v => { S.sub.vTab = v; render(true); },
+  'hub-tab': v => { const [hub, t] = v.split(':'); S.sub[hub === 'jornada' ? 'jTab' : 'cTab'] = t; S.animNext = true; if (location.hash !== '#' + hub) location.hash = hub; else render(true); window.scrollTo({ top: 0, behavior: 'smooth' }); },
   'nova-venda': id => abrirVenda({}, id || ''),
   'lancar-venda': () => modal('Lançar venda', V3.lancarVendaForm(), { wide: true }),
   'editar-lancamento': id => modal('Editar venda', V3.lancarVendaForm({ id, ...S.vendas[id] }), { wide: true }),
