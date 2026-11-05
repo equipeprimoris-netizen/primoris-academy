@@ -3,8 +3,8 @@ import {
   S, esc, brl, brlShort, num, pct, fmtDT, fmtDate, list, firstName, nome, isGestor, isAdmin, minhasEquipes, equipeDe,
   CATEGORIAS_FORUM, papel, respostasDe, statusTopico, projecao, initials, vgv, today,
   vendasDe, vendaStatus, STATUS_VENDA, inP, contatosDe, geral,
-} from './core.js?v=15';
-import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=15';
+} from './core.js?v=16';
+import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=16';
 
 const autor = (uid, extra = '') => {
   const m = S.members[uid] || {}; const g = ['gestor', 'admin', 'superadmin'].includes(m.role);

@@ -6,9 +6,9 @@ import {
   vgv, vgvTotal, vendasValidadas, vgvMensal, contatosDe, ativDe, prospeccoes, followups, reunioesDe, funil, esfriando, prog,
   szDias, szDia, szResumo, cursosPublicados, cursoStatus, cursosObrigatorios, treinamentosConcluidos, certCodigo, niveisCfg,
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
-} from './core.js?v=15';
-import * as V2 from './views2.js?v=15';
-import * as V3 from './views3.js?v=15';
+} from './core.js?v=16';
+import * as V2 from './views2.js?v=16';
+import * as V3 from './views3.js?v=16';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
@@ -671,7 +671,7 @@ export const admin = () => {
       <li>A solicitação aparece na aba Usuários. Clique em <strong>Liberar acesso</strong> e defina perfil (Consultor, Gestor ou Administrador), nível, equipe e gestor.</li></ol>
       <p class="muted">As permissões valem no servidor: um consultor só lê a própria carteira; o gestor, a da equipe; administradores, tudo. Para retirar alguém, marque o usuário como Bloqueado ou Desativado: o acesso aos dados é cortado na hora.</p>
       <h3>Instalar no celular</h3><p>Android (Chrome): abra o endereço e toque em <strong>Instalar app</strong> no menu lateral ou em ⋮ → Instalar app. iPhone (Safari): toque em Compartilhar → <strong>Adicionar à Tela de Início</strong>. Depois, ative as notificações pelo sino.</p>
-      <h3>Domínio próprio (ex.: academy.primoris.com.br)</h3><ol><li>Compre o domínio (Registro.br para .com.br).</li><li>No painel do domínio, crie um registro <code>CNAME</code> de <code>academy</code> apontando para <code>equipeprimoris-netizen.github.io</code>.</li><li>Me avise: eu configuro o GitHub Pages, o Supabase e o Google com o novo endereço.</li></ol></section>`;
+      <h3>Domínio próprio</h3><p>O sistema está no ar em <strong>https://equipeprimoris.com.br</strong>, com HTTPS. O domínio foi registrado no Registro.br (DNS em modo avançado, apontando para o GitHub Pages) e renova em 04/11/2028.</p></section>`;
   }
   return pageHead('Administração', 'Configure a operação sem depender de programação.') + `<div class="tabs scroll">${tabs.map(([v, l]) => `<button class="${tab === v ? 'on' : ''}" data-act="ad-tab" data-id="${v}">${l}</button>`).join('')}</div>` + body;
 };
