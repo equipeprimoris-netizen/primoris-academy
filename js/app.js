@@ -1,10 +1,10 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=19';
-import * as V from './views.js?v=19';
-import * as P from './platform.js?v=19';
-import * as V2 from './views2.js?v=19';
-import * as V3 from './views3.js?v=19';
-import * as B from './biblioteca.js?v=19';
+import * as C from './core.js?v=20';
+import * as V from './views.js?v=20';
+import * as P from './platform.js?v=20';
+import * as V2 from './views2.js?v=20';
+import * as V3 from './views3.js?v=20';
+import * as B from './biblioteca.js?v=20';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -42,7 +42,7 @@ const run = async (fn, ok) => { try { const r = await fn(); if (ok) toast(ok, 'o
 
 // ---------- Renderização
 let rq = false, deferred = false;
-B.ligar(() => render(true), (m, t) => toast(m, t));
+B.ligar(() => render(true), (m, t) => toast(m, t), c => modal('Adicionar à carteira', V.contatoForm(c), { wide: true }));
 const schedule = () => { if (rq) return; rq = true; requestAnimationFrame(() => { rq = false; render(); }); };
 function editing() { const a = document.activeElement; return a && $app.contains(a) && a.matches('input:not([type=checkbox]):not([type=radio]),textarea,select') && !a.dataset.filter; }
 const SPLASH_MS = 10000; let splashT = null;

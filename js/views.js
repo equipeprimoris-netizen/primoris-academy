@@ -6,9 +6,9 @@ import {
   vgv, vgvTotal, vendasValidadas, vgvMensal, contatosDe, ativDe, prospeccoes, followups, reunioesDe, funil, esfriando, prog,
   szDias, szDia, szResumo, cursosPublicados, cursoStatus, cursosObrigatorios, treinamentosConcluidos, certCodigo, niveisCfg,
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
-} from './core.js?v=19';
-import * as V2 from './views2.js?v=19';
-import * as V3 from './views3.js?v=19';
+} from './core.js?v=20';
+import * as V2 from './views2.js?v=20';
+import * as V3 from './views3.js?v=20';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
@@ -45,6 +45,7 @@ const P = {
   kanban: '<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/>',
   rows: '<path d="M3 6h18M3 12h18M3 18h18"/>',
   shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
   gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
   car: '<path d="M5 16.5h14M3.5 16.5V12l2-5h13l2 5v4.5H3.5Z"/><path d="M3.5 12h17"/><circle cx="7.5" cy="16.5" r="1.8"/><circle cx="16.5" cy="16.5" r="1.8"/>',
   cifrao: '<circle cx="12" cy="12" r="9"/><path d="M15 8.8c-.6-.8-1.6-1.3-3-1.3-1.7 0-2.8.9-2.8 2.1 0 3 5.8 1.6 5.8 4.6 0 1.3-1.2 2.3-3 2.3-1.4 0-2.5-.6-3.1-1.5M12 5.8v1.7M12 16.5v1.7"/>',
