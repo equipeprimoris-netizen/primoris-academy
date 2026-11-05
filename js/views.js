@@ -6,9 +6,9 @@ import {
   vgv, vgvTotal, vendasValidadas, vgvMensal, contatosDe, ativDe, prospeccoes, followups, reunioesDe, funil, esfriando, prog,
   szDias, szDia, szResumo, cursosPublicados, cursoStatus, cursosObrigatorios, treinamentosConcluidos, certCodigo, niveisCfg,
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
-} from './core.js?v=18';
-import * as V2 from './views2.js?v=18';
-import * as V3 from './views3.js?v=18';
+} from './core.js?v=19';
+import * as V2 from './views2.js?v=19';
+import * as V3 from './views3.js?v=19';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
