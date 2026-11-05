@@ -772,3 +772,4 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .bib-msgbox textarea { width: 100%; margin-top: 10px; }
 .bib-prev { margin: 4px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(31,168,85,.1); border: 1px solid rgba(31,168,85,.35); }
 .bib-ex-tbl .chip.ok { margin-left: 4px; }
+.bib-espera { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; } .bib-espera b { color: #fff; font-variant-numeric: tabular-nums; }

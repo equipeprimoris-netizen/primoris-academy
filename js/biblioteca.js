@@ -1,7 +1,7 @@
 // Primoris Academy — Biblioteca Primoris: Downloader do Instagram, Extrator de Empresas e Editor de Imagem com IA.
-import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=22';
-import { ic, pageHead } from './views.js?v=22';
-import * as P from './platform.js?v=22';
+import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=23';
+import { ic, pageHead } from './views.js?v=23';
+import * as P from './platform.js?v=23';
 
 const FN = name => `https://wgwhgcnbkwwrzaovsmij.supabase.co/functions/v1/${name}`;
 const EXTENSAO = 'downloads/primoris-extrator.zip?v=1';
@@ -69,13 +69,13 @@ const extrator = () => {
     <label class="field"><span>Cidade / bairro</span><input data-bib-input="exCidade" value="${esc(ex.cidade)}" placeholder="Ex.: Curitiba, Moema São Paulo"></label>
     <button class="btn accent" ${ex.loading ? 'disabled' : ''}>${ex.loading ? '<span class="bib-spin"></span> Buscando…' : `${bi('mapa', 16)} Buscar empresas`}</button>
   </form>
-  ${ex.loading ? '<p class="muted small">Procurando no mapa… pode levar até 30 segundos em cidades grandes.</p>' : ''}
+  ${ex.loading ? '<p class="muted small bib-espera"><span class="bib-spin"></span> Procurando no mapa gratuito… <b id="ex-seg">0s</b>. Em capitais pode levar até 40 segundos; para ir mais rápido, informe o <strong>bairro</strong> (ex.: <em>Copacabana, Rio de Janeiro</em>). Buscas já feitas pela equipe aparecem na hora.</p>' : ''}
   <details class="bib-msgbox"><summary>${ic('msg', 15)} Mensagem do WhatsApp <span class="muted small">(clique para editar)</span></summary>
     <textarea data-bib-input="exMsg" rows="3" maxlength="600">${esc(lerMsg())}</textarea>
     <p class="muted small">Use <code>{empresa}</code> para o nome da empresa e <code>{consultor}</code> para o seu nome. Fica salva só para você.</p>
     <p class="small bib-prev"><span class="muted">Prévia:</span> ${esc(montarMsg({ nome: 'Clínica Exemplo' }))}</p></details>
   ${ex.erro ? `<p class="bib-msg bad">${esc(ex.erro)}</p>` : ''}
-  ${ex.lista.length ? `<div class="bib-ex-bar"><strong>${ex.lista.length} empresa(s)</strong><span class="muted small">${esc(ex.feita)} · ${cel} com celular</span>
+  ${ex.lista.length ? `<div class="bib-ex-bar"><strong>${ex.lista.length} empresa(s)</strong><span class="muted small">${esc(ex.feita)} · ${cel} com celular${ex.daEquipe ? ' · resultado já buscado pela equipe' : ''}</span>
     <label class="bib-chk"><input type="checkbox" data-bib-check="soCel" ${ex.soCel ? 'checked' : ''}> Só celulares</label>
     <span class="grow"></span>
     <button class="btn sm accent" data-bib="copiar-cel" ${cel ? '' : 'disabled'}>${ic('copy', 15)} Copiar todos os celulares</button>
@@ -211,14 +211,19 @@ const proCache = (k, d) => { try { const c = JSON.parse(sessionStorage.getItem(C
 async function buscarOSM(busca, cidade) {
   if (!cidade.trim()) throw new Error('Informe a cidade (ex.: Curitiba ou Moema, São Paulo).');
   const chave = tirarAcento((busca + '|' + cidade).toLowerCase().trim()); const salvo = doCache(chave); if (salvo) return salvo;
+  // Cache da equipe: se alguém já fez essa busca nos últimos 7 dias, o resultado aparece na hora
+  const idCache = chave.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120);
+  try { const sn = await S.db.doc('cachemp/' + idCache).get(); const d = sn.exists ? sn.data() : null; if (d && Date.now() - new Date(d.at).getTime() < 7 * 864e5 && d.empresas?.length) { const r = { empresas: d.empresas, local: d.local, daEquipe: true }; proCache(chave, r); return r; } } catch { /* segue para o mapa */ }
   const c = await cidadeOSM(cidade); if (!c) throw new Error('Não encontrei essa cidade. Escreva o nome completo (ex.: Curitiba, PR).');
-  const alvo = c.area ? '(area.a)' : `(${c.bbox})`;
+  // Buscar dentro do retângulo da cidade é bem mais rápido do que pelo contorno exato
+  const alvo = '';
   const termo = tirarAcento(busca.toLowerCase());
   const filtros = NICHOS.filter(([re]) => re.test(termo)).flatMap(([, f]) => f);
   const palavra = busca.replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).filter(w => w.length > 2).sort((a, b) => b.length - a.length)[0] || busca;
   // Com nicho conhecido, busca só pelas categorias (bem mais rápido); senão, procura pelo nome
   const partes = filtros.length ? filtros.map(f => `nwr[${f}]["name"]${alvo};`) : [`nwr["name"~"${palavra.replace(/"/g, '')}",i]["name"]${alvo};`];
-  const d = await overpass(`[out:json][timeout:30];${c.area ? `area(${c.area})->.a;` : ''}(${partes.join('')});out center tags 400;`);
+  if (!c.bbox) throw new Error('Não consegui delimitar essa cidade. Tente escrever o nome completo (ex.: Curitiba, PR).');
+  const d = await overpass(`[out:json][timeout:35][bbox:${c.bbox}];(${partes.join('')});out center tags qt 400;`);
   const vistos = new Set();
   const l = (d.elements || []).map(e => {
     const t = e.tags || {};
@@ -229,19 +234,23 @@ async function buscarOSM(busca, cidade) {
     return { id: `${e.type}/${e.id}`, nome: t.name, categoria: '', endereco: end, telefone: tp.bonito, tipo: tp.tipo, whats: tp.whats, site: t.website || t['contact:website'] || '', email: t.email || t['contact:email'] || '', nota: null, avaliacoes: 0, mapa: lat ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name + ' ' + (t['addr:city'] || cidade))}` : '' };
   }).filter(e => { const k = (e.nome || '').toLowerCase() + e.telefone; if (!e.nome || vistos.has(k)) return false; vistos.add(k); return true; });
   l.sort((a, b) => (b.tipo === 'celular' ? 2 : b.telefone ? 1 : 0) - (a.tipo === 'celular' ? 2 : a.telefone ? 1 : 0));
-  const res = { empresas: l.slice(0, 300), local: c.nome }; proCache(chave, res); return res;
+  const res = { empresas: l.slice(0, 300), local: c.nome }; proCache(chave, res);
+  if (res.empresas.length) S.db.doc('cachemp/' + idCache).set({ empresas: res.empresas, local: c.nome, busca, cidade, at: new Date().toISOString(), by: S.uid }).catch(() => {});
+  return res;
 }
 async function buscarEmpresas() {
   if (ex.loading) return;
   if (ex.busca.trim().length < 2) { ex.erro = 'Diga o que você procura (ex.: dentista, academia).'; return rerender(); }
-  Object.assign(ex, { loading: true, erro: '', lista: [], proxima: null, emails: {} }); rerender();
+  Object.assign(ex, { loading: true, erro: '', lista: [], proxima: null, emails: {}, t0: Date.now() }); rerender();
+  const relogio = setInterval(() => { const el = document.getElementById('ex-seg'); if (el) el.textContent = Math.round((Date.now() - ex.t0) / 1000) + 's'; }, 1000);
   try {
     const d = await buscarOSM(ex.busca.trim(), ex.cidade.trim());
+    ex.daEquipe = !!d.daEquipe;
     ex.lista = d.empresas; d.empresas.forEach(e => { if (e.email) ex.emails[e.id] = [e.email]; });
     ex.feita = [ex.busca, (d.local || ex.cidade).split(',')[0]].filter(Boolean).join(' · ');
     if (!ex.lista.length) ex.erro = 'Nenhuma empresa encontrada no mapa gratuito. Tente um termo mais comum (ex.: "clínica", "loja") ou outra cidade.';
   } catch (e) { ex.erro = e.name === 'AbortError' ? 'A busca demorou demais. Tente de novo ou use uma cidade/bairro menor.' : e.message === 'Failed to fetch' ? 'Sem conexão com o mapa. Verifique sua internet.' : e.message; }
-  finally { ex.loading = false; rerender(); }
+  finally { clearInterval(relogio); ex.loading = false; rerender(); }
 }
 async function buscarEmail(i) {
   const e = ex.lista[i]; if (!e?.site) return;
