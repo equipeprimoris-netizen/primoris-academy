@@ -1,7 +1,7 @@
 // Primoris Academy — Biblioteca Primoris: Downloader do Instagram, Extrator de Empresas e Editor de Imagem com IA.
-import { S, esc } from './core.js?v=20';
-import { ic, pageHead } from './views.js?v=20';
-import * as P from './platform.js?v=20';
+import { S, esc } from './core.js?v=21';
+import { ic, pageHead } from './views.js?v=21';
+import * as P from './platform.js?v=21';
 
 const FN = name => `https://wgwhgcnbkwwrzaovsmij.supabase.co/functions/v1/${name}`;
 const EXTENSAO = 'downloads/primoris-extrator.zip?v=1';
@@ -18,7 +18,7 @@ const bi = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0
 
 const FERRAMENTAS = [
   { id: 'instagram', nome: 'Downloader do Instagram', tag: 'Instagram', icone: bi('insta', 24), texto: 'Cole o link de um reel, post ou vídeo e baixe em alta qualidade, sem marca d\'água.' },
-  { id: 'extrator', nome: 'Extrator de Empresas', tag: 'Prospecção', icone: bi('mapa', 24), texto: 'Pesquise empresas do Google Maps aqui mesmo: telefone, celular, site e e-mail, prontos para copiar ou chamar no WhatsApp.' },
+  { id: 'extrator', nome: 'Extrator de Empresas', tag: 'Prospecção', icone: bi('mapa', 24), texto: 'Pesquise empresas por nicho e cidade aqui mesmo: telefone, celular, site e e-mail, prontos para copiar ou chamar no WhatsApp.' },
   { id: 'editor', nome: 'Editor de Imagem com IA', tag: 'Inteligência Artificial', icone: bi('magia', 24), texto: 'Envie uma imagem de referência e sua foto: a IA recria a cena com você no lugar.' },
 ];
 
@@ -61,6 +61,7 @@ const extrator = () => {
     <label class="field"><span>Cidade / bairro</span><input data-bib-input="exCidade" value="${esc(ex.cidade)}" placeholder="Ex.: Curitiba, Moema São Paulo"></label>
     <button class="btn accent" ${ex.loading ? 'disabled' : ''}>${ex.loading ? '<span class="bib-spin"></span> Buscando…' : `${bi('mapa', 16)} Buscar empresas`}</button>
   </form>
+  ${ex.loading ? '<p class="muted small">Procurando no mapa… pode levar até 30 segundos em cidades grandes.</p>' : ''}
   ${ex.erro ? `<p class="bib-msg bad">${esc(ex.erro)}</p>` : ''}
   ${ex.lista.length ? `<div class="bib-ex-bar"><strong>${ex.lista.length} empresa(s)</strong><span class="muted small">${esc(ex.feita)} · ${cel} com celular</span>
     <label class="bib-chk"><input type="checkbox" data-bib-check="soCel" ${ex.soCel ? 'checked' : ''}> Só celulares</label>
@@ -75,9 +76,9 @@ const extrator = () => {
     <td>${e.nota ? `★ ${String(e.nota).replace('.', ',')} <small class="muted">(${e.avaliacoes})</small>` : '—'}</td>
     <td class="acts">${e.telefone ? `<button class="btn xs" data-bib="copiar" data-id="${i}" title="Copiar número">${ic('copy', 13)}</button>` : ''}${e.whats ? `<a class="btn xs wa" href="https://wa.me/${e.whats}" target="_blank" rel="noopener" title="Chamar no WhatsApp">WhatsApp</a>` : ''}${e.telefone ? `<button class="btn xs" data-bib="carteira" data-id="${i}" title="Adicionar à minha carteira">${ic('plus', 13)} Carteira</button>` : ''}${e.mapa ? `<a class="btn xs" href="${esc(e.mapa)}" target="_blank" rel="noopener" title="Ver no Google Maps">${bi('mapa', 13)}</a>` : ''}</td></tr>`; }).join('')}
   </tbody></table></div>
-  ${ex.proxima ? `<div class="bib-row bib-c"><button class="btn" data-bib="mais" ${ex.loading ? 'disabled' : ''}>Carregar mais empresas</button></div>` : '<p class="muted small bib-c">O Google mostra no máximo 60 empresas por busca. Para achar mais, mude o bairro ou o termo.</p>'}` : !ex.loading && !ex.erro ? `<div class="bib-ex-vazio">${bi('mapa', 34)}<p>Digite um nicho e uma cidade. As empresas do Google Maps aparecem aqui, com o telefone pronto para copiar.</p></div>` : ''}
+  <p class="muted small bib-c">Fonte: OpenStreetMap (mapa aberto e gratuito). Nem toda empresa tem telefone cadastrado lá: as com celular aparecem primeiro. Use o botão do mapa para conferir no Google Maps.</p>` : !ex.loading && !ex.erro ? `<div class="bib-ex-vazio">${bi('mapa', 34)}<p>Digite um nicho e uma cidade. As empresas aparecem aqui, com o telefone pronto para copiar.</p></div>` : ''}
 </section>
-<p class="muted small">Prefere coletar direto do Google Maps com rolagem automática? <a href="${EXTENSAO}" download="primoris-extrator.zip">Baixe a extensão do Chrome</a> (opcional). Use os contatos de forma responsável: mensagens em massa não solicitadas podem bloquear o seu WhatsApp.</p>`;
+<p class="muted small">Quer mais empresas e telefones? A extensão gratuita coleta direto do Google Maps, com rolagem automática: <a href="${EXTENSAO}" download="primoris-extrator.zip">Baixe a extensão do Chrome</a> (opcional). Use os contatos de forma responsável: mensagens em massa não solicitadas podem bloquear o seu WhatsApp.</p>`;
 };
 
 const caixa = (chave, n, titulo, texto, icone) => { const img = ed[chave]; return `<label class="bib-drop ${img ? 'has' : ''}" data-bib-drop="${chave}">
@@ -112,17 +113,110 @@ async function chamar(fn, corpo) {
   if (!d.ok) throw new Error(d.error || 'Não foi possível concluir.');
   return d;
 }
-async function buscarEmpresas(mais = false) {
+// ---------- Busca gratuita no OpenStreetMap, feita direto do navegador (sem chave e sem custo)
+const NICHOS = [
+  [/dent|odont/, ['"amenity"="dentist"', '"healthcare"="dentist"']],
+  [/academia|crossfit|muscula|fitness|pilates/, ['"leisure"="fitness_centre"', '"sport"="fitness"']],
+  [/imobili|corretor de im/, ['"office"="estate_agent"', '"shop"="estate_agent"']],
+  [/contab|contador/, ['"office"="accountant"']],
+  [/advoga|advocacia|jur[ií]dic/, ['"office"="lawyer"']],
+  [/restaurante|lanchonete|hamburg/, ['"amenity"="restaurant"', '"amenity"="fast_food"']],
+  [/pizza/, ['"cuisine"~"pizza"']],
+  [/padaria|confeitaria/, ['"shop"="bakery"', '"shop"="pastry"']],
+  [/caf[eé]|cafeteria/, ['"amenity"="cafe"']],
+  [/(^|\s)bar(\s|$)|choperia|(^|\s)pub(\s|$)/, ['"amenity"="bar"', '"amenity"="pub"']],
+  [/farm[aá]c|drogaria/, ['"amenity"="pharmacy"', '"shop"="chemist"']],
+  [/cl[ií]nica|consult[oó]rio/, ['"amenity"="clinic"', '"amenity"="doctors"', '"healthcare"="clinic"']],
+  [/m[eé]dic/, ['"amenity"="doctors"', '"healthcare"="doctor"']],
+  [/hospital/, ['"amenity"="hospital"']],
+  [/psic[oó]l/, ['"healthcare"="psychotherapist"', '"healthcare:speciality"~"psych"']],
+  [/fisio/, ['"healthcare"="physiotherapist"']],
+  [/veterin/, ['"amenity"="veterinary"']],
+  [/pet ?shop|petshop|banho e tosa/, ['"shop"="pet"', '"shop"="pet_grooming"']],
+  [/sal[aã]o|cabeleire|barbear|est[eé]tica|beleza|manicure/, ['"shop"="hairdresser"', '"shop"="beauty"']],
+  [/[oó]tica/, ['"shop"="optician"']],
+  [/mercado|supermercado|mercearia|hortifruti/, ['"shop"="supermarket"', '"shop"="convenience"', '"shop"="greengrocer"']],
+  [/oficina|mec[aâ]nic|auto ?pe[cç]as|funilaria/, ['"shop"="car_repair"', '"shop"="car_parts"']],
+  [/concession[aá]ria|revenda de (carro|ve[ií]culo)|seminovos/, ['"shop"="car"']],
+  [/moto/, ['"shop"="motorcycle"']],
+  [/auto ?escola|autoescola/, ['"amenity"="driving_school"']],
+  [/hotel|pousada|hostel/, ['"tourism"="hotel"', '"tourism"="guest_house"', '"tourism"="hostel"']],
+  [/escola|col[eé]gio|curso|idioma/, ['"amenity"="school"', '"amenity"="language_school"', '"amenity"="college"']],
+  [/roupa|moda|boutique|confec/, ['"shop"="clothes"', '"shop"="boutique"']],
+  [/cal[cç]ado|sapat/, ['"shop"="shoes"']],
+  [/m[oó]veis|decora|colch/, ['"shop"="furniture"', '"shop"="interior_decoration"', '"shop"="bed"']],
+  [/constru|material de constr|home center/, ['"shop"="hardware"', '"shop"="doityourself"', '"office"="construction_company"', '"craft"="builder"']],
+  [/arquitet/, ['"office"="architect"']],
+  [/engenhar/, ['"office"="engineer"']],
+  [/seguro/, ['"office"="insurance"']],
+  [/banco|financeira|cr[eé]dito|cons[oó]rcio/, ['"amenity"="bank"', '"office"="financial"', '"office"="financial_advisor"']],
+  [/ag[eê]ncia de viage|turismo/, ['"shop"="travel_agency"']],
+  [/joalheria|rel[oó]gio/, ['"shop"="jewelry"', '"shop"="watches"']],
+  [/eletr[oô]nic|celular|inform[aá]tica/, ['"shop"="electronics"', '"shop"="mobile_phone"', '"shop"="computer"']],
+  [/posto|combust/, ['"amenity"="fuel"']],
+  [/lavanderia/, ['"shop"="laundry"', '"shop"="dry_cleaning"']],
+  [/florica|flores/, ['"shop"="florist"']],
+  [/gr[aá]fica/, ['"shop"="copyshop"', '"craft"="printer"']],
+  [/marketing|publicidade|ag[eê]ncia/, ['"office"="advertising_agency"', '"office"="marketing"']],
+  [/empresa|com[eé]rcio|loja/, ['"shop"', '"office"']],
+];
+const tirarAcento = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function tipoTelefone(tel) {
+  let d = String(tel).replace(/\D/g, '');
+  if (d.startsWith('55') && d.length >= 12) d = d.slice(2);
+  if (d.startsWith('0')) d = d.slice(1);
+  if (d.length === 11 && d[2] === '9') return { tipo: 'celular', whats: '55' + d, bonito: `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` };
+  if (d.length === 10) return { tipo: 'fixo', whats: '55' + d, bonito: `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}` };
+  return { tipo: d.length >= 8 ? 'outro' : '', whats: d.length >= 10 ? '55' + d : '', bonito: tel };
+}
+async function comTempo(url, opt = {}, ms = 40000) {
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
+  try { return await fetch(url, { ...opt, signal: c.signal }); } finally { clearTimeout(t); }
+}
+async function cidadeOSM(cidade) {
+  const r = await comTempo('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=br&accept-language=pt-BR&q=' + encodeURIComponent(cidade), {}, 15000);
+  if (!r.ok) throw new Error('O mapa gratuito não respondeu. Tente de novo em instantes.');
+  const l = await r.json(); const rel = l.find(x => x.osm_type === 'relation') || l[0]; if (!rel) return null;
+  const bb = (rel.boundingbox || []).map(Number);
+  return { nome: rel.display_name, area: rel.osm_type === 'relation' ? 3600000000 + Number(rel.osm_id) : null, bbox: bb.length === 4 ? `${bb[0]},${bb[2]},${bb[1]},${bb[3]}` : null };
+}
+async function overpass(q) {
+  for (const host of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter']) {
+    try { const r = await comTempo(host, { method: 'POST', body: 'data=' + encodeURIComponent(q) }); if (r.ok) return await r.json(); } catch { /* tenta o próximo */ }
+  }
+  throw new Error('O mapa gratuito está ocupado agora. Tente de novo em 1 minuto.');
+}
+async function buscarOSM(busca, cidade) {
+  if (!cidade.trim()) throw new Error('Informe a cidade (ex.: Curitiba ou Moema, São Paulo).');
+  const c = await cidadeOSM(cidade); if (!c) throw new Error('Não encontrei essa cidade. Escreva o nome completo (ex.: Curitiba, PR).');
+  const alvo = c.area ? '(area.a)' : `(${c.bbox})`;
+  const termo = tirarAcento(busca.toLowerCase());
+  const filtros = NICHOS.filter(([re]) => re.test(termo)).flatMap(([, f]) => f);
+  const palavra = busca.replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).filter(w => w.length > 2).sort((a, b) => b.length - a.length)[0] || busca;
+  const partes = [...filtros.map(f => `nwr[${f}]["name"]${alvo};`), `nwr["name"~"${palavra.replace(/"/g, '')}",i][~"^(shop|amenity|office|craft|healthcare|leisure|tourism)$"~"."]${alvo};`];
+  const d = await overpass(`[out:json][timeout:30];${c.area ? `area(${c.area})->.a;` : ''}(${partes.join('')});out center tags 400;`);
+  const vistos = new Set();
+  const l = (d.elements || []).map(e => {
+    const t = e.tags || {};
+    const tel = String(t.phone || t['contact:phone'] || t['contact:mobile'] || t.mobile || t['contact:whatsapp'] || '').split(/[;,/]/)[0].trim();
+    const tp = tel ? tipoTelefone(tel) : { tipo: '', whats: '', bonito: '' };
+    const end = [t['addr:street'] && `${t['addr:street']}${t['addr:housenumber'] ? ', ' + t['addr:housenumber'] : ''}`, t['addr:suburb'], t['addr:city']].filter(Boolean).join(' - ');
+    const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
+    return { id: `${e.type}/${e.id}`, nome: t.name, categoria: '', endereco: end, telefone: tp.bonito, tipo: tp.tipo, whats: tp.whats, site: t.website || t['contact:website'] || '', email: t.email || t['contact:email'] || '', nota: null, avaliacoes: 0, mapa: lat ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name + ' ' + (t['addr:city'] || cidade))}` : '' };
+  }).filter(e => { const k = (e.nome || '').toLowerCase() + e.telefone; if (!e.nome || vistos.has(k)) return false; vistos.add(k); return true; });
+  l.sort((a, b) => (b.tipo === 'celular' ? 2 : b.telefone ? 1 : 0) - (a.tipo === 'celular' ? 2 : a.telefone ? 1 : 0));
+  return { empresas: l.slice(0, 300), local: c.nome };
+}
+async function buscarEmpresas() {
   if (ex.loading) return;
-  if (!mais && ex.busca.trim().length < 2) { ex.erro = 'Diga o que você procura (ex.: dentista, academia).'; return rerender(); }
-  Object.assign(ex, { loading: true, erro: '' }); if (!mais) Object.assign(ex, { lista: [], proxima: null, emails: {} }); rerender();
+  if (ex.busca.trim().length < 2) { ex.erro = 'Diga o que você procura (ex.: dentista, academia).'; return rerender(); }
+  Object.assign(ex, { loading: true, erro: '', lista: [], proxima: null, emails: {} }); rerender();
   try {
-    const d = await chamar('primoris-empresas', { acao: 'buscar', busca: ex.busca, cidade: ex.cidade, pagina: mais ? ex.proxima : undefined });
-    const ids = new Set(ex.lista.map(e => e.id));
-    ex.lista.push(...d.empresas.filter(e => !ids.has(e.id))); ex.proxima = d.proxima;
-    ex.feita = [ex.busca, ex.cidade].filter(Boolean).join(' · ');
-    if (!ex.lista.length) ex.erro = 'Nenhuma empresa encontrada. Tente outro termo ou cidade.';
-  } catch (e) { ex.erro = e.message === 'Failed to fetch' ? 'Sem conexão com o servidor. Verifique sua internet.' : e.message; }
+    const d = await buscarOSM(ex.busca.trim(), ex.cidade.trim());
+    ex.lista = d.empresas; d.empresas.forEach(e => { if (e.email) ex.emails[e.id] = [e.email]; });
+    ex.feita = [ex.busca, (d.local || ex.cidade).split(',')[0]].filter(Boolean).join(' · ');
+    if (!ex.lista.length) ex.erro = 'Nenhuma empresa encontrada no mapa gratuito. Tente um termo mais comum (ex.: "clínica", "loja") ou outra cidade.';
+  } catch (e) { ex.erro = e.name === 'AbortError' ? 'A busca demorou demais. Tente de novo ou use uma cidade/bairro menor.' : e.message === 'Failed to fetch' ? 'Sem conexão com o mapa. Verifique sua internet.' : e.message; }
   finally { ex.loading = false; rerender(); }
 }
 async function buscarEmail(i) {
@@ -210,7 +304,6 @@ document.addEventListener('click', e => {
   if (el.dataset.bib === 'tab') { S.sub.bTab = id; S.animNext = true; rerender(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   else if (el.dataset.bib === 'limpar') { ed[id] = null; rerender(); }
   else if (el.dataset.bib === 'gerar') gerar();
-  else if (el.dataset.bib === 'mais') buscarEmpresas(true);
   else if (el.dataset.bib === 'email') buscarEmail(Number(id));
   else if (el.dataset.bib === 'copiar') { const e = ex.lista[Number(id)]; if (e) copiar(e.telefone, `Número copiado: ${e.telefone}`); }
   else if (el.dataset.bib === 'copiar-cel') { const l = ex.lista.filter(e => e.tipo === 'celular'); copiar(l.map(e => `${e.nome}\t${e.telefone}`).join('\n'), `${l.length} celulares copiados. Cole na planilha ou no bloco de notas.`); }
