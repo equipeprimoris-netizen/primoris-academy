@@ -633,3 +633,26 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .boot-msg { letter-spacing: .04em; } .boot-msg b { color: #fff; font-variant-numeric: tabular-nums; margin-left: 4px; }
 .boot.splash.saindo { animation: splashSai .38s ease-in forwards; }
 @keyframes splashSai { to { opacity: 0; transform: scale(1.04); filter: blur(4px); } }
+
+/* ---------- Abertura: a coroa enche de vermelho e brilha (10 s) */
+.sp-coroa { --d: 0ms; position: relative; width: 220px; aspect-ratio: 1059 / 755; margin: 0 auto 8px; animation: coroaEntra 1.1s var(--ease) both; }
+.sp-coroa img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sp-base { filter: grayscale(1) brightness(.2); opacity: .5; }
+.sp-glow, .sp-cheia { position: absolute; inset: 0; }
+.sp-glow { animation: spGlow 1.8s ease-in-out infinite; }
+.sp-cheia { clip-path: inset(100% 0 0 0); animation: spEnche 10s linear var(--d) forwards; }
+@keyframes spEnche { to { clip-path: inset(0 0 0 0); } }
+@keyframes spGlow { 0%, 100% { filter: drop-shadow(0 0 10px rgba(227,40,60,.55)) saturate(1.1); } 50% { filter: drop-shadow(0 0 32px rgba(255,60,80,.95)) brightness(1.18) saturate(1.25); } }
+.sp-nivel, .sp-brilho { position: absolute; inset: 0; -webkit-mask: url('../img/coroa-240.webp') center / 100% 100% no-repeat; mask: url('../img/coroa-240.webp') center / 100% 100% no-repeat; pointer-events: none; }
+.sp-nivel { background: linear-gradient(0deg, transparent calc(var(--lv) - 3%), rgba(255,255,255,.95) var(--lv), transparent calc(var(--lv) + 2.5%)); mix-blend-mode: screen; animation: spNivel 10s linear var(--d) forwards; }
+@property --lv { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+@keyframes spNivel { from { --lv: 0%; } to { --lv: 100%; } }
+.sp-brilho { background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.55) 48%, transparent 60%); background-size: 260% 100%; mix-blend-mode: screen; animation: spReflexo 2.6s ease-in-out infinite; }
+@keyframes spReflexo { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+.sp-nome strong { animation: rise .6s .35s var(--ease) both; } .sp-nome span { animation: rise .6s .5s var(--ease) both; }
+.boot.splash .sp-nome strong { font-size: 40px; letter-spacing: .24em; }
+.boot.splash::before { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(215,25,46,.22), transparent 65%); top: 50%; left: 50%; transform: translate(-50%, -62%); animation: spAura 3s ease-in-out infinite; pointer-events: none; }
+@keyframes spAura { 50% { opacity: .55; transform: translate(-50%, -62%) scale(1.12); } }
+.boot.splash { position: relative; }
+@media (max-width: 520px) { .sp-coroa { width: 180px; } .boot.splash .sp-nome strong { font-size: 32px; } }
+@media (prefers-reduced-motion: reduce) { .sp-brilho, .boot.splash::before { animation: none; } .sp-glow { animation: none; filter: drop-shadow(0 0 14px rgba(227,40,60,.6)); } }

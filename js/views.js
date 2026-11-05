@@ -6,9 +6,9 @@ import {
   vgv, vgvTotal, vendasValidadas, vgvMensal, contatosDe, ativDe, prospeccoes, followups, reunioesDe, funil, esfriando, prog,
   szDias, szDia, szResumo, cursosPublicados, cursoStatus, cursosObrigatorios, treinamentosConcluidos, certCodigo, niveisCfg,
   proxNivel, reqsNivelAtual, conquistasDe, metasDe, metaVgvMensal, metaVgvEscopo, missao, atrasados, geral, fmtPhone, normPhone, monthLabel,
-} from './core.js?v=11';
-import * as V2 from './views2.js?v=11';
-import * as V3 from './views3.js?v=11';
+} from './core.js?v=12';
+import * as V2 from './views2.js?v=12';
+import * as V3 from './views3.js?v=12';
 
 // ---------- Ícones (traço único, 24px)
 const P = {
@@ -88,7 +88,7 @@ const projecaoMin = u => { const { mesesMilhao, falta } = projecaoLeve(u); retur
 const projecaoLeve = u => { const mm = geral().metaMilhao; const tot = vgvTotal(u); const falta = Math.max(0, mm - tot); const m = vgvMensal([u], 3).reduce((s, x) => s + x.valor, 0) / 3; return { falta, mesesMilhao: falta && m > 0 ? Math.ceil(falta / m) : null }; };
 
 // ---------- Telas de entrada
-export const loading = (msg = 'Preparando sua jornada…', splash = false) => splash ? `<div class="center-screen boot splash">${brandBig(true)}<div class="boot-line fill"><span style="animation-delay:-${Math.round(performance.now())}ms"></span></div><p class="muted small boot-msg">Preparando sua jornada… <b id="boot-pct">${Math.min(99, Math.floor(performance.now() / 100))}%</b></p></div>` : `<div class="center-screen boot">${brandBig(true)}<div class="boot-line"><span></span></div><p class="muted small">${esc(msg)}</p></div>`;
+export const loading = (msg = 'Preparando sua jornada…', splash = false) => splash ? `<div class="center-screen boot splash"><div class="sp-coroa" style="--d:-${Math.round(performance.now())}ms"><img class="sp-base" src="img/coroa-240.webp" width="220" height="157" alt=""><span class="sp-glow"><span class="sp-cheia"><img src="img/coroa-240.webp" width="220" height="157" alt=""></span></span><span class="sp-nivel"></span><span class="sp-brilho"></span></div><div class="brand-big sp-nome"><strong>PRIMORIS</strong><span>ACADEMY</span></div><p class="muted small boot-msg">Preparando sua jornada… <b id="boot-pct">${Math.min(99, Math.floor(performance.now() / 100))}%</b></p></div>` : `<div class="center-screen boot">${brandBig(true)}<div class="boot-line"><span></span></div><p class="muted small">${esc(msg)}</p></div>`;
 export const fatal = msg => `<div class="center-screen">${brandBig()}<div class="notice">${esc(msg)}</div></div>`;
 
 export const solicitarAcesso = () => {
