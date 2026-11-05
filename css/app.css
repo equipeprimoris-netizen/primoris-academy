@@ -773,3 +773,8 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .bib-prev { margin: 4px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(31,168,85,.1); border: 1px solid rgba(31,168,85,.35); }
 .bib-ex-tbl .chip.ok { margin-left: 4px; }
 .bib-espera { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; } .bib-espera b { color: #fff; font-variant-numeric: tabular-nums; }
+.bib-imp { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 12px; }
+.bib-imp label.btn { cursor: pointer; }
+.bib-compl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 10px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border); font-size: 14px; }
+.bib-compl.ok { background: rgba(31,168,85,.1); border-color: rgba(31,168,85,.35); }
+.bib-compl b { color: #fff; }

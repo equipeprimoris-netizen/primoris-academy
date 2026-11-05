@@ -1,10 +1,10 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=23';
-import * as V from './views.js?v=23';
-import * as P from './platform.js?v=23';
-import * as V2 from './views2.js?v=23';
-import * as V3 from './views3.js?v=23';
-import * as B from './biblioteca.js?v=23';
+import * as C from './core.js?v=24';
+import * as V from './views.js?v=24';
+import * as P from './platform.js?v=24';
+import * as V2 from './views2.js?v=24';
+import * as V3 from './views3.js?v=24';
+import * as B from './biblioteca.js?v=24';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -243,7 +243,7 @@ async function celebrar() {
 }
 // Extrator de Empresas: ao chamar no WhatsApp, a empresa entra na Carteira (Primeira abordagem) e conta como prospecção
 async function prospectarEmpresa(e) {
-  const telNorm = C.normPhone(e.whats); if (telNorm.length < 12) throw new Error('Telefone inválido para WhatsApp.');
+  const telNorm = String(e.whats || '').replace(/\D/g, ''); if (telNorm.length < 10) throw new Error('Telefone inválido para WhatsApp.');
   let c = C.findDuplicate(telNorm);
   if (c && c.ownerId !== S.uid) return { bloqueado: true, msg: `${e.nome} já está em atendimento por outro consultor da operação.` };
   let novo = false;
