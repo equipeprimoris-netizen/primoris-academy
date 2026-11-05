@@ -767,3 +767,8 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .bib-ex-vazio .ic { color: var(--accent); }
 .bib-c { text-align: center; justify-content: center; }
 @media (max-width: 760px) { .bib-ex-form { grid-template-columns: 1fr; } }
+.bib-msgbox { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; background: rgba(255,255,255,.02); }
+.bib-msgbox summary { cursor: pointer; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.bib-msgbox textarea { width: 100%; margin-top: 10px; }
+.bib-prev { margin: 4px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(31,168,85,.1); border: 1px solid rgba(31,168,85,.35); }
+.bib-ex-tbl .chip.ok { margin-left: 4px; }

@@ -1,7 +1,7 @@
 // Primoris Academy — Biblioteca Primoris: Downloader do Instagram, Extrator de Empresas e Editor de Imagem com IA.
-import { S, esc } from './core.js?v=21';
-import { ic, pageHead } from './views.js?v=21';
-import * as P from './platform.js?v=21';
+import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=22';
+import { ic, pageHead } from './views.js?v=22';
+import * as P from './platform.js?v=22';
 
 const FN = name => `https://wgwhgcnbkwwrzaovsmij.supabase.co/functions/v1/${name}`;
 const EXTENSAO = 'downloads/primoris-extrator.zip?v=1';
@@ -30,7 +30,8 @@ const ed = { ref: null, eu: null, instr: '', loading: false, erro: '', resultado
 let rerender = () => {};
 let avisar = () => {};
 let novoContato = () => {};
-export function ligar(fnRender, fnToast, fnContato) { rerender = fnRender; avisar = fnToast; if (fnContato) novoContato = fnContato; }
+let prospectar = async () => {};
+export function ligar(fnRender, fnToast, fnContato, fnProspectar) { rerender = fnRender; avisar = fnToast; if (fnContato) novoContato = fnContato; if (fnProspectar) prospectar = fnProspectar; }
 
 // ---------- Telas
 const voltar = () => `<button class="linkbtn" data-bib="tab" data-id="inicio">${ic('back', 16)} Voltar para a Biblioteca</button>`;
@@ -52,6 +53,13 @@ const instagram = () => {
   </section><p class="muted small">Funciona com posts públicos. Stories, destaques e contas privadas não são suportados. Baixe só conteúdo seu ou que você tem autorização para usar.</p>`;
 };
 
+const MSG_PADRAO = 'Olá! Tudo bem? Aqui é {consultor}, da Primoris. Encontrei a {empresa} e gostaria de apresentar uma oportunidade rápida. Posso te enviar mais detalhes?';
+const chaveMsg = () => 'primoris-msg-' + (S.uid || '');
+const lerMsg = () => { try { return localStorage.getItem(chaveMsg()) || MSG_PADRAO; } catch { return MSG_PADRAO; } };
+const montarMsg = e => lerMsg().replace(/\{empresa\}/g, e.nome).replace(/\{consultor\}/g, firstName(nome(S.uid)) || 'seu consultor');
+const jaProspectado = e => { const c = e.whats ? findDuplicate(e.whats) : null; return c && c.ownerId === S.uid ? c : null; };
+const prospectadosExtrator = () => list(S.contatos).filter(c => c.ownerId === S.uid && c.fonte === 'extrator' && !c.deletedAt).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+const etapaNome = id => (ETAPAS.find(x => x.id === id) || {}).nome || 'Novo contato';
 const fone = t => ({ celular: '<span class="chip ok">Celular</span>', fixo: '<span class="chip">Fixo</span>' }[t] || '');
 const extrator = () => {
   const l = ex.soCel ? ex.lista.filter(e => e.tipo === 'celular') : ex.lista; const cel = ex.lista.filter(e => e.tipo === 'celular').length;
@@ -62,6 +70,10 @@ const extrator = () => {
     <button class="btn accent" ${ex.loading ? 'disabled' : ''}>${ex.loading ? '<span class="bib-spin"></span> Buscando…' : `${bi('mapa', 16)} Buscar empresas`}</button>
   </form>
   ${ex.loading ? '<p class="muted small">Procurando no mapa… pode levar até 30 segundos em cidades grandes.</p>' : ''}
+  <details class="bib-msgbox"><summary>${ic('msg', 15)} Mensagem do WhatsApp <span class="muted small">(clique para editar)</span></summary>
+    <textarea data-bib-input="exMsg" rows="3" maxlength="600">${esc(lerMsg())}</textarea>
+    <p class="muted small">Use <code>{empresa}</code> para o nome da empresa e <code>{consultor}</code> para o seu nome. Fica salva só para você.</p>
+    <p class="small bib-prev"><span class="muted">Prévia:</span> ${esc(montarMsg({ nome: 'Clínica Exemplo' }))}</p></details>
   ${ex.erro ? `<p class="bib-msg bad">${esc(ex.erro)}</p>` : ''}
   ${ex.lista.length ? `<div class="bib-ex-bar"><strong>${ex.lista.length} empresa(s)</strong><span class="muted small">${esc(ex.feita)} · ${cel} com celular</span>
     <label class="bib-chk"><input type="checkbox" data-bib-check="soCel" ${ex.soCel ? 'checked' : ''}> Só celulares</label>
@@ -69,15 +81,17 @@ const extrator = () => {
     <button class="btn sm accent" data-bib="copiar-cel" ${cel ? '' : 'disabled'}>${ic('copy', 15)} Copiar todos os celulares</button>
     <button class="btn sm" data-bib="csv">${ic('download', 15)} Planilha (CSV)</button></div>
   <div class="tablewrap"><table class="tbl bib-ex-tbl"><thead><tr><th>Empresa</th><th>Telefone</th><th>Site / e-mail</th><th>Nota</th><th></th></tr></thead><tbody>
-  ${l.map(e => { const i = ex.lista.indexOf(e); const em = ex.emails[e.id]; return `<tr><td><strong>${esc(e.nome)}</strong><small class="muted">${esc(e.categoria ? e.categoria + ' · ' : '')}${esc(e.endereco)}</small></td>
+  ${l.map(e => { const i = ex.lista.indexOf(e); const em = ex.emails[e.id]; return `<tr><td><strong>${esc(e.nome)}</strong>${(() => { const c = jaProspectado(e); return c ? ` <span class="chip ok">✓ Prospectado ${fmtDate((c.createdAt || '').slice(0, 10))}</span>` : ''; })()}<small class="muted">${esc(e.categoria ? e.categoria + ' · ' : '')}${esc(e.endereco)}</small></td>
     <td>${e.telefone ? `<span class="bib-tel">${esc(e.telefone)}</span> ${fone(e.tipo)}` : '<span class="muted small">Sem telefone</span>'}</td>
     <td>${e.site ? `<a href="${esc(e.site)}" target="_blank" rel="noopener" class="small">${esc(e.site.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').slice(0, 34))}</a>` : '<span class="muted small">—</span>'}
       ${em === undefined ? (e.site ? `<br><button class="linkbtn small" data-bib="email" data-id="${i}">Buscar e-mail</button>` : '') : em === 'carregando' ? '<br><span class="muted small">Buscando e-mail…</span>' : em.length ? `<br><span class="small">${em.map(esc).join('<br>')}</span>` : '<br><span class="muted small">E-mail não encontrado</span>'}</td>
     <td>${e.nota ? `★ ${String(e.nota).replace('.', ',')} <small class="muted">(${e.avaliacoes})</small>` : '—'}</td>
-    <td class="acts">${e.telefone ? `<button class="btn xs" data-bib="copiar" data-id="${i}" title="Copiar número">${ic('copy', 13)}</button>` : ''}${e.whats ? `<a class="btn xs wa" href="https://wa.me/${e.whats}" target="_blank" rel="noopener" title="Chamar no WhatsApp">WhatsApp</a>` : ''}${e.telefone ? `<button class="btn xs" data-bib="carteira" data-id="${i}" title="Adicionar à minha carteira">${ic('plus', 13)} Carteira</button>` : ''}${e.mapa ? `<a class="btn xs" href="${esc(e.mapa)}" target="_blank" rel="noopener" title="Ver no Google Maps">${bi('mapa', 13)}</a>` : ''}</td></tr>`; }).join('')}
+    <td class="acts">${e.telefone ? `<button class="btn xs" data-bib="copiar" data-id="${i}" title="Copiar número">${ic('copy', 13)}</button>` : ''}${e.whats ? `<button class="btn xs wa" data-bib="wa" data-id="${i}" title="Abrir o WhatsApp com a mensagem pronta e registrar a prospecção">${ex.enviando === e.id ? '<span class="bib-spin"></span>' : ''} ${jaProspectado(e) ? 'Chamar de novo' : 'Chamar no WhatsApp'}</button>` : ''}${e.mapa ? `<a class="btn xs" href="${esc(e.mapa)}" target="_blank" rel="noopener" title="Ver no Google Maps">${bi('mapa', 13)}</a>` : ''}</td></tr>`; }).join('')}
   </tbody></table></div>
   <p class="muted small bib-c">Fonte: OpenStreetMap (mapa aberto e gratuito). Nem toda empresa tem telefone cadastrado lá: as com celular aparecem primeiro. Use o botão do mapa para conferir no Google Maps.</p>` : !ex.loading && !ex.erro ? `<div class="bib-ex-vazio">${bi('mapa', 34)}<p>Digite um nicho e uma cidade. As empresas aparecem aqui, com o telefone pronto para copiar.</p></div>` : ''}
 </section>
+${(() => { const l = prospectadosExtrator(); return l.length ? `<section class="card bib-panel"><div class="bib-ex-bar"><strong>${ic('phone', 16)} Suas prospecções pelo Extrator</strong><span class="muted small">${l.length} empresa(s) · elas já estão na sua Carteira e contam nas suas prospecções</span><span class="grow"></span><a class="btn sm" href="#carteira">Abrir Carteira</a></div>
+  <div class="tablewrap"><table class="tbl"><thead><tr><th>Data</th><th>Empresa</th><th>WhatsApp</th><th>Etapa</th></tr></thead><tbody>${l.slice(0, 30).map(c => `<tr><td>${fmtDate((c.createdAt || '').slice(0, 10))}</td><td><strong>${esc(c.nome)}</strong>${c.cidade ? `<small class="muted">${esc(c.cidade)}</small>` : ''}</td><td><a href="https://wa.me/${esc(c.telNorm)}" target="_blank" rel="noopener">${esc(fmtPhone(c.telNorm))}</a></td><td><span class="chip">${esc(etapaNome(c.etapa))}</span></td></tr>`).join('')}</tbody></table></div></section>` : ''; })()}
 <p class="muted small">Quer mais empresas e telefones? A extensão gratuita coleta direto do Google Maps, com rolagem automática: <a href="${EXTENSAO}" download="primoris-extrator.zip">Baixe a extensão do Chrome</a> (opcional). Use os contatos de forma responsável: mensagens em massa não solicitadas podem bloquear o seu WhatsApp.</p>`;
 };
 
@@ -180,20 +194,30 @@ async function cidadeOSM(cidade) {
   const bb = (rel.boundingbox || []).map(Number);
   return { nome: rel.display_name, area: rel.osm_type === 'relation' ? 3600000000 + Number(rel.osm_id) : null, bbox: bb.length === 4 ? `${bb[0]},${bb[2]},${bb[1]},${bb[3]}` : null };
 }
+// Pergunta aos 3 servidores do mapa ao mesmo tempo e fica com o primeiro que responder
 async function overpass(q) {
-  for (const host of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter']) {
-    try { const r = await comTempo(host, { method: 'POST', body: 'data=' + encodeURIComponent(q) }); if (r.ok) return await r.json(); } catch { /* tenta o próximo */ }
-  }
-  throw new Error('O mapa gratuito está ocupado agora. Tente de novo em 1 minuto.');
+  const ctrls = []; const hosts = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  try {
+    return await Promise.any(hosts.map(async host => {
+      const c = new AbortController(); ctrls.push(c); const t = setTimeout(() => c.abort(), 40000);
+      try { const r = await fetch(host, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: c.signal }); if (!r.ok) throw new Error('ocupado'); return await r.json(); } finally { clearTimeout(t); }
+    }));
+  } catch { throw new Error('O mapa gratuito está ocupado agora. Tente de novo em 1 minuto.'); }
+  finally { ctrls.forEach(c => c.abort()); }
 }
+const CACHE = 'primoris-extrator-cache';
+const doCache = k => { try { const c = JSON.parse(sessionStorage.getItem(CACHE) || '{}')[k]; return c && Date.now() - c.t < 3600e3 ? c.d : null; } catch { return null; } };
+const proCache = (k, d) => { try { const c = JSON.parse(sessionStorage.getItem(CACHE) || '{}'); c[k] = { t: Date.now(), d }; const ks = Object.keys(c); if (ks.length > 12) delete c[ks[0]]; sessionStorage.setItem(CACHE, JSON.stringify(c)); } catch { /* sem espaço */ } };
 async function buscarOSM(busca, cidade) {
   if (!cidade.trim()) throw new Error('Informe a cidade (ex.: Curitiba ou Moema, São Paulo).');
+  const chave = tirarAcento((busca + '|' + cidade).toLowerCase().trim()); const salvo = doCache(chave); if (salvo) return salvo;
   const c = await cidadeOSM(cidade); if (!c) throw new Error('Não encontrei essa cidade. Escreva o nome completo (ex.: Curitiba, PR).');
   const alvo = c.area ? '(area.a)' : `(${c.bbox})`;
   const termo = tirarAcento(busca.toLowerCase());
   const filtros = NICHOS.filter(([re]) => re.test(termo)).flatMap(([, f]) => f);
   const palavra = busca.replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).filter(w => w.length > 2).sort((a, b) => b.length - a.length)[0] || busca;
-  const partes = [...filtros.map(f => `nwr[${f}]["name"]${alvo};`), `nwr["name"~"${palavra.replace(/"/g, '')}",i][~"^(shop|amenity|office|craft|healthcare|leisure|tourism)$"~"."]${alvo};`];
+  // Com nicho conhecido, busca só pelas categorias (bem mais rápido); senão, procura pelo nome
+  const partes = filtros.length ? filtros.map(f => `nwr[${f}]["name"]${alvo};`) : [`nwr["name"~"${palavra.replace(/"/g, '')}",i]["name"]${alvo};`];
   const d = await overpass(`[out:json][timeout:30];${c.area ? `area(${c.area})->.a;` : ''}(${partes.join('')});out center tags 400;`);
   const vistos = new Set();
   const l = (d.elements || []).map(e => {
@@ -205,7 +229,7 @@ async function buscarOSM(busca, cidade) {
     return { id: `${e.type}/${e.id}`, nome: t.name, categoria: '', endereco: end, telefone: tp.bonito, tipo: tp.tipo, whats: tp.whats, site: t.website || t['contact:website'] || '', email: t.email || t['contact:email'] || '', nota: null, avaliacoes: 0, mapa: lat ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name + ' ' + (t['addr:city'] || cidade))}` : '' };
   }).filter(e => { const k = (e.nome || '').toLowerCase() + e.telefone; if (!e.nome || vistos.has(k)) return false; vistos.add(k); return true; });
   l.sort((a, b) => (b.tipo === 'celular' ? 2 : b.telefone ? 1 : 0) - (a.tipo === 'celular' ? 2 : a.telefone ? 1 : 0));
-  return { empresas: l.slice(0, 300), local: c.nome };
+  const res = { empresas: l.slice(0, 300), local: c.nome }; proCache(chave, res); return res;
 }
 async function buscarEmpresas() {
   if (ex.loading) return;
@@ -308,6 +332,16 @@ document.addEventListener('click', e => {
   else if (el.dataset.bib === 'copiar') { const e = ex.lista[Number(id)]; if (e) copiar(e.telefone, `Número copiado: ${e.telefone}`); }
   else if (el.dataset.bib === 'copiar-cel') { const l = ex.lista.filter(e => e.tipo === 'celular'); copiar(l.map(e => `${e.nome}\t${e.telefone}`).join('\n'), `${l.length} celulares copiados. Cole na planilha ou no bloco de notas.`); }
   else if (el.dataset.bib === 'csv') baixarCsv();
+  else if (el.dataset.bib === 'wa') {
+    const e = ex.lista[Number(id)]; if (!e?.whats || ex.enviando) return;
+    const url = `https://wa.me/${e.whats}?text=${encodeURIComponent(montarMsg(e))}`;
+    const jan = window.open('about:blank', '_blank'); // abre já no clique (o navegador bloqueia se abrir depois)
+    ex.enviando = e.id; rerender();
+    prospectar(e).then(r => {
+      if (r && r.bloqueado) { jan?.close(); avisar(r.msg, 'warn'); }
+      else { if (jan) { jan.opener = null; jan.location.href = url; } else location.href = url; avisar(r?.novo ? `Prospecção registrada: ${e.nome} entrou na sua Carteira.` : `Prospecção registrada para ${e.nome}.`, 'ok'); }
+    }).catch(err => { jan?.close(); avisar(err.message || 'Não foi possível registrar.', 'warn'); }).finally(() => { ex.enviando = null; rerender(); });
+  }
   else if (el.dataset.bib === 'carteira') { const e = ex.lista[Number(id)]; if (e) novoContato({ nome: e.nome, telefone: e.telefone, origem: 'Prospecção ativa', cidade: (e.endereco.match(/,\s*([^,]+?)\s*-\s*[A-Z]{2}/) || [])[1] || ex.cidade }); }
 });
 document.addEventListener('input', e => {
@@ -316,6 +350,7 @@ document.addEventListener('input', e => {
   if (k === 'edInstr') ed.instr = e.target.value;
   if (k === 'exBusca') ex.busca = e.target.value;
   if (k === 'exCidade') ex.cidade = e.target.value;
+  if (k === 'exMsg') { try { localStorage.setItem(chaveMsg(), e.target.value.trim() || MSG_PADRAO); } catch { /* sem espaço */ } const pv = document.querySelector('.bib-prev'); if (pv) pv.innerHTML = '<span class="muted">Prévia:</span> ' + esc(montarMsg({ nome: 'Clínica Exemplo' })); }
 });
 document.addEventListener('change', e => { const k = e.target.dataset?.bibFile; if (k) definirImagem(k, e.target.files[0]); if (e.target.dataset?.bibCheck === 'soCel') { ex.soCel = e.target.checked; rerender(); } });
 document.addEventListener('submit', e => {

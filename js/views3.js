@@ -4,9 +4,9 @@ import {
   CATEGORIAS_FORUM, papel, respostasDe, statusTopico, projecao, initials, vgv, today,
   vendasDe, vendaStatus, STATUS_VENDA, inP, contatosDe, geral,
   proxNivel, nivelNome, conquistasDe, vgvTotal, atrasados,
-} from './core.js?v=21';
-import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=21';
-import * as V from './views.js?v=21';
+} from './core.js?v=22';
+import { ic, chip, bar, card, empty, field, inp, sel, txt, opt, pageHead } from './views.js?v=22';
+import * as V from './views.js?v=22';
 
 const autor = (uid, extra = '') => {
   const m = S.members[uid] || {}; const g = ['gestor', 'admin', 'superadmin'].includes(m.role);
@@ -246,4 +246,4 @@ export const carteiraHub = () => {
 };
 
 // ---------- Biblioteca Primoris: as ferramentas ficam em biblioteca.js
-export { biblioteca } from './biblioteca.js?v=21';
+export { biblioteca } from './biblioteca.js?v=22';

@@ -1,10 +1,10 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=21';
-import * as V from './views.js?v=21';
-import * as P from './platform.js?v=21';
-import * as V2 from './views2.js?v=21';
-import * as V3 from './views3.js?v=21';
-import * as B from './biblioteca.js?v=21';
+import * as C from './core.js?v=22';
+import * as V from './views.js?v=22';
+import * as P from './platform.js?v=22';
+import * as V2 from './views2.js?v=22';
+import * as V3 from './views3.js?v=22';
+import * as B from './biblioteca.js?v=22';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -42,7 +42,7 @@ const run = async (fn, ok) => { try { const r = await fn(); if (ok) toast(ok, 'o
 
 // ---------- Renderização
 let rq = false, deferred = false;
-B.ligar(() => render(true), (m, t) => toast(m, t), c => modal('Adicionar à carteira', V.contatoForm(c), { wide: true }));
+B.ligar(() => render(true), (m, t) => toast(m, t), c => modal('Adicionar à carteira', V.contatoForm(c), { wide: true }), prospectarEmpresa);
 const schedule = () => { if (rq) return; rq = true; requestAnimationFrame(() => { rq = false; render(); }); };
 function editing() { const a = document.activeElement; return a && $app.contains(a) && a.matches('input:not([type=checkbox]):not([type=radio]),textarea,select') && !a.dataset.filter; }
 const SPLASH_MS = 10000; let splashT = null;
@@ -240,6 +240,23 @@ async function celebrar() {
     for (const d of C.desafioAtivo()) { if (C.desafioProgresso(S.uid, d).ok && !p.desafiosOk?.[d.id]) { patch.desafiosOk = { ...(patch.desafiosOk || {}), [d.id]: nowISO() }; await add('feedbacks', { tipo: 'mural', de: S.uid, texto: `${C.firstName(nome(S.uid))} cumpriu o desafio “${d.titulo}”!`, equipeId: C.equipeDe(S.uid), auto: true, at: nowISO() }); toast('Desafio cumprido: ' + d.titulo, 'ok'); } }
     if (Object.keys(patch).length) await merge('progresso/' + S.uid, patch, S.progresso[S.uid]);
   } catch (e) { /* comemoração é opcional */ }
+}
+// Extrator de Empresas: ao chamar no WhatsApp, a empresa entra na Carteira (Primeira abordagem) e conta como prospecção
+async function prospectarEmpresa(e) {
+  const telNorm = C.normPhone(e.whats); if (telNorm.length < 12) throw new Error('Telefone inválido para WhatsApp.');
+  let c = C.findDuplicate(telNorm);
+  if (c && c.ownerId !== S.uid) return { bloqueado: true, msg: `${e.nome} já está em atendimento por outro consultor da operação.` };
+  let novo = false;
+  if (!c) {
+    const idx = await S.db.doc('dupidx/' + telNorm).get().catch(() => null);
+    if (idx?.exists && idx.data().ownerId !== S.uid) { gestoresDe(S.uid).forEach(x => notify(x, `${nome(S.uid)} tentou prospectar uma empresa que já está em atendimento por outro consultor (${e.nome}, ${C.fmtPhone(telNorm)}).`, 'carteira')); return { bloqueado: true, msg: `${e.nome} já está em atendimento por outro consultor. Seu gestor foi avisado.` }; }
+    const cidade = (e.endereco.match(/-\s*([^-]+)$/) || [])[1]?.trim() || '';
+    const d = { nome: e.nome, telefone: telNorm, telNorm, email: (e.email || '').toLowerCase(), origem: 'Prospecção ativa', indicadoPor: '', produto: '', valor: 0, cidade, uf: '', temperatura: '', site: e.site || '', endereco: e.endereco || '', fonte: 'extrator', obs: 'Empresa encontrada pelo Extrator de Empresas (Biblioteca Primoris).', etapa: 'novo', ownerId: S.uid, equipeId: C.equipeDe(S.uid), createdAt: nowISO(), createdBy: S.uid, historico: [] };
+    const ref = await add('contatos', d); salvarDupIdx({ telNorm, ownerId: S.uid }, ref.id);
+    c = { id: ref.id, ...d }; S.contatos[ref.id] = S.contatos[ref.id] || c; novo = true;
+  }
+  await registrarAtividade(c, 'whatsapp', 'Mensagem enviada', 'Prospecção pelo Extrator de Empresas');
+  return { novo };
 }
 const salvarDupIdx = (c, id) => c.telNorm && put('dupidx/' + c.telNorm, { ownerId: c.ownerId, contatoId: id, at: nowISO() }).catch(() => {});
 const gestoresDe = uid => { const g = C.gestorDe(uid); return g && g !== uid ? [g] : []; };
