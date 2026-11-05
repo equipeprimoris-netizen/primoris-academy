@@ -1,7 +1,7 @@
 // Primoris Academy — Biblioteca Primoris: Downloader do Instagram, Extrator de Empresas e Editor de Imagem com IA.
-import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=24';
-import { ic, pageHead } from './views.js?v=24';
-import * as P from './platform.js?v=24';
+import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=25';
+import { ic, pageHead } from './views.js?v=25';
+import * as P from './platform.js?v=25';
 
 const FN = name => `https://wgwhgcnbkwwrzaovsmij.supabase.co/functions/v1/${name}`;
 const EXTENSAO = 'downloads/primoris-extrator.zip?v=1';
@@ -215,13 +215,22 @@ async function cidadeOSM(cidade) {
 }
 // Pergunta aos 3 servidores do mapa ao mesmo tempo e fica com o primeiro que responder
 async function overpass(q) {
-  const ctrls = []; const hosts = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  const ctrls = []; let vazios = 0; const hosts = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
   try {
     return await Promise.any(hosts.map(async host => {
       const c = new AbortController(); ctrls.push(c); const t = setTimeout(() => c.abort(), 40000);
-      try { const r = await fetch(host, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: c.signal }); if (!r.ok) throw new Error('ocupado'); return await r.json(); } finally { clearTimeout(t); }
+      try {
+        const r = await fetch(host, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: c.signal }); if (!r.ok) throw new Error('ocupado');
+        const d = await r.json();
+        // Servidor sobrecarregado costuma responder rápido, mas vazio ou com aviso de erro: espera os outros
+        if (/error|timed out|timeout/i.test(d.remark || '') || !(d.elements || []).length) { vazios++; throw new Error('vazio'); }
+        return d;
+      } finally { clearTimeout(t); }
     }));
-  } catch { throw new Error('O mapa gratuito está ocupado agora. Tente de novo em 1 minuto.'); }
+  } catch {
+    if (vazios) return { elements: [] };
+    throw new Error('O mapa gratuito está ocupado agora. Tente de novo em 1 minuto.');
+  }
   finally { ctrls.forEach(c => c.abort()); }
 }
 const CACHE = 'primoris-extrator-cache';
@@ -253,7 +262,7 @@ async function buscarOSM(busca, cidade) {
     return { id: `${e.type}/${e.id}`, nome: t.name, categoria: '', endereco: end, telefone: tp.bonito, tipo: tp.tipo, whats: tp.whats, site: t.website || t['contact:website'] || '', email: t.email || t['contact:email'] || '', nota: null, avaliacoes: 0, mapa: lat ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name + ' ' + (t['addr:city'] || cidade))}` : '' };
   }).filter(e => { const k = (e.nome || '').toLowerCase() + e.telefone; if (!e.nome || vistos.has(k)) return false; vistos.add(k); return true; });
   l.sort((a, b) => (b.tipo === 'celular' ? 2 : b.telefone ? 1 : 0) - (a.tipo === 'celular' ? 2 : a.telefone ? 1 : 0));
-  const res = { empresas: l.slice(0, 300), local: c.nome, cacheId: idCache, cc: c.cc }; proCache(chave, res);
+  const res = { empresas: l.slice(0, 300), local: c.nome, cacheId: idCache, cc: c.cc }; if (res.empresas.length) proCache(chave, res);
   if (res.empresas.length) S.db.doc('cachemp/' + idCache).set({ empresas: res.empresas, local: c.nome, busca, cidade, at: new Date().toISOString(), by: S.uid }).catch(() => {});
   return res;
 }
