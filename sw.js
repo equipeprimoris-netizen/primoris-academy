@@ -1,5 +1,5 @@
 // Primoris Academy — service worker: abertura rápida (cache do app) e notificações push.
-const VERSAO = 'primoris-v13';
+const VERSAO = 'primoris-v14';
 const APP = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/core.js', 'js/views.js', 'js/platform.js', 'js/views2.js', 'js/views3.js', 'manifest.webmanifest', 'icons/icon-192.png', 'img/coroa-240.webp', 'img/coroa-64.webp', 'img/coroa-640.webp', 'img/equipe.jpg', 'img/favicon-64.png'];
 
 self.addEventListener('install', e => {
@@ -9,21 +9,30 @@ self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSAO).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-// Arquivos do app: mostra a versão salva na hora e atualiza em segundo plano.
-// Bibliotecas e fontes externas: cache permanente. Banco de dados: sempre rede.
+// Página: sempre busca a versão mais nova na internet (usa a salva só se estiver sem conexão).
+// Arquivos versionados (?v=N), bibliotecas e fontes: cache, porque cada versão nova tem um endereço novo.
+// Banco de dados: sempre rede.
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== 'GET') return;
-  if (url.hostname.endsWith('supabase.co')) return;
+  const req = e.request; const url = new URL(req.url);
+  if (req.method !== 'GET' || url.hostname.endsWith('supabase.co')) return;
   const externo = url.origin !== location.origin;
   if (externo && !/jsdelivr|gstatic|googleapis/.test(url.hostname)) return;
-  const p = caches.open(VERSAO).then(async c => {
-    const salvo = await c.match(e.request, { ignoreSearch: !externo });
-    const rede = (externo && salvo) ? null : fetch(externo ? e.request : e.request.url, externo ? undefined : { cache: 'no-cache', credentials: 'same-origin' }).then(r => { if (r.ok || r.type === 'opaque') c.put(e.request, r.clone()); return r; });
-    return { salvo, rede };
-  });
-  e.respondWith(p.then(x => x.salvo || x.rede));
-  e.waitUntil(p.then(x => x.rede && x.rede.catch(() => {})));
+  if (req.mode === 'navigate') {
+    e.respondWith((async () => {
+      const c = await caches.open(VERSAO);
+      try { const r = await fetch(req.url, { cache: 'no-store', credentials: 'same-origin' }); if (r.ok) c.put('index.html', r.clone()); return r; }
+      catch (x) { return (await c.match('index.html')) || (await c.match('./')) || Response.error(); }
+    })());
+    return;
+  }
+  e.respondWith((async () => {
+    const c = await caches.open(VERSAO);
+    const salvo = await c.match(req);
+    if (salvo) return salvo;
+    const r = await fetch(req);
+    if (r.ok || r.type === 'opaque') c.put(req, r.clone());
+    return r;
+  })());
 });
 
 self.addEventListener('push', e => {
