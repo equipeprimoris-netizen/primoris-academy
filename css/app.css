@@ -778,3 +778,9 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .bib-compl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 10px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border); font-size: 14px; }
 .bib-compl.ok { background: rgba(31,168,85,.1); border-color: rgba(31,168,85,.35); }
 .bib-compl b { color: #fff; }
+.bib-gratis { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0 14px; padding: 10px 14px; border-radius: 10px; background: rgba(31,168,85,.1); border: 1px solid rgba(31,168,85,.35); font-size: 14px; }
+.bib-gratis .ic { color: #3ad07a; flex: none; margin-top: 2px; }
+.bib-gemini { margin-top: 16px; padding: 16px 18px; border-radius: 14px; border: 1px solid rgba(227,40,60,.45); background: linear-gradient(120deg, rgba(215,25,46,.12), rgba(20,20,22,.9) 60%); }
+.bib-gemini h4 { margin: 0 0 10px; font-size: 16px; }
+.bib-gemini .bib-passos li { align-items: center; flex-wrap: wrap; gap: 8px; }
+.bib-prompt { white-space: pre-wrap; font-size: 12.5px; background: rgba(0,0,0,.35); padding: 12px; border-radius: 10px; color: #ddd; margin-top: 8px; }

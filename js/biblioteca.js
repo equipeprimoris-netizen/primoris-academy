@@ -1,7 +1,7 @@
 // Primoris Academy — Biblioteca Primoris: Downloader do Instagram, Extrator de Empresas e Editor de Imagem com IA.
-import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=25';
-import { ic, pageHead } from './views.js?v=25';
-import * as P from './platform.js?v=25';
+import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=26';
+import { ic, pageHead } from './views.js?v=26';
+import * as P from './platform.js?v=26';
 
 const FN = name => `https://wgwhgcnbkwwrzaovsmij.supabase.co/functions/v1/${name}`;
 const EXTENSAO = 'downloads/primoris-extrator.zip?v=1';
@@ -19,7 +19,7 @@ const bi = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0
 const FERRAMENTAS = [
   { id: 'instagram', nome: 'Downloader do Instagram', tag: 'Instagram', icone: bi('insta', 24), texto: 'Cole o link de um reel, post ou vídeo e baixe em alta qualidade, sem marca d\'água.' },
   { id: 'extrator', nome: 'Extrator de Empresas', tag: 'Prospecção', icone: bi('mapa', 24), texto: 'Pesquise empresas por nicho e cidade aqui mesmo: telefone, celular, site e e-mail, prontos para copiar ou chamar no WhatsApp.' },
-  { id: 'editor', nome: 'Editor de Imagem com IA', tag: 'Inteligência Artificial', icone: bi('magia', 24), texto: 'Envie uma imagem de referência e sua foto: a IA recria a cena com você no lugar.' },
+  { id: 'editor', nome: 'Editor de Imagem com IA', tag: 'Inteligência Artificial', icone: bi('magia', 24), texto: 'Envie uma imagem de referência e sua foto: a IA do Gemini recria a cena com você no lugar. Grátis.' },
 ];
 
 // Estado local (fica guardado enquanto o app estiver aberto)
@@ -103,16 +103,35 @@ const caixa = (chave, n, titulo, texto, icone) => { const img = ed[chave]; retur
   ${img ? `<img src="${img.dataUrl}" alt=""><button type="button" class="bib-x" data-bib="limpar" data-id="${chave}" aria-label="Remover">${ic('x', 14)}</button>` : `<span class="bib-ph">${bi(icone, 34)}<strong>${titulo}</strong><span>${texto}</span><span class="muted small">Clique, arraste ou cole (Ctrl+V)</span></span>`}
   <input type="file" accept="image/*" data-bib-file="${chave}" hidden>
 </label>`; };
+const PROMPT_BASE = `Vou te enviar duas imagens.
+IMAGEM 1 = REFERÊNCIA: define a cena, a pose, o enquadramento, a roupa, o cenário, a iluminação, as cores e o estilo.
+IMAGEM 2 = MINHA FOTO: sou eu, a pessoa que deve aparecer no resultado.
+Crie UMA nova imagem que recrie a IMAGEM 1 o mais fiel possível, mas comigo (IMAGEM 2) no lugar da pessoa da referência.
+Preserve exatamente o meu rosto, traços, tom de pele e formato do rosto: eu preciso ser reconhecível.
+Mantenha da referência: pose, ângulo da câmera, roupa, acessórios, cenário, luz, paleta de cores, textura e proporção da imagem.
+Resultado fotorrealista (ou no mesmo estilo artístico da referência, se ela não for foto).`;
+const promptFinal = () => PROMPT_BASE + (ed.instr.trim() ? `\nAjustes que eu quero: ${ed.instr.trim()}` : '');
 const editor = () => voltar() + `<section class="card bib-panel">${cabecalho(FERRAMENTAS[2])}
+  <p class="bib-gratis">${ic('check', 15)} <span><strong>Grátis:</strong> o sistema prepara as imagens e as instruções, e a imagem é gerada no app do <strong>Gemini</strong> (Google), que tem cota gratuita diária. Basta estar logado com uma conta Google.</span></p>
   <div class="bib-duas">
     ${caixa('ref', 1, 'Referência', 'A cena, pose e estilo que você quer copiar.', 'imagem')}
     ${caixa('eu', 2, 'Sua foto', 'De preferência com o rosto bem visível e boa luz.', 'selfie')}
   </div>
-  <label class="field"><span>Ajustes (opcional)</span><textarea data-bib-input="edInstr" rows="2" maxlength="800" placeholder="Ex.: manter meu cabelo cacheado, deixar o fundo mais claro, formato quadrado">${esc(ed.instr)}</textarea></label>
-  <div class="bib-row"><button class="btn accent" data-bib="gerar" ${ed.loading ? 'disabled' : ''}>${ed.loading ? '<span class="bib-spin"></span> Gerando com IA…' : `${bi('magia', 16)} Deixar igual à referência`}</button><span class="muted small">${ed.loading ? 'Pode levar até 40 segundos. Não feche esta tela.' : 'Leva de 10 a 40 segundos.'}</span></div>
+  <label class="field"><span>Ajustes (opcional)</span><textarea data-bib-input="edInstr" rows="2" maxlength="800" placeholder="Ex.: trocar as cores para preto, verde e branco; colocar meu nome no lugar do nome da referência; formato quadrado">${esc(ed.instr)}</textarea></label>
+  <div class="bib-row"><button class="btn accent" data-bib="preparar">${bi('magia', 16)} Preparar para o Gemini</button><span class="muted small">Leva 1 minuto: copiar, colar e enviar.</span></div>
   ${ed.erro ? `<p class="bib-msg bad">${esc(ed.erro)}</p>` : ''}
-  ${ed.resultado ? `<div class="bib-result"><img src="${ed.resultado.src}" alt="Resultado"><div class="bib-row bib-c"><a class="btn accent" href="${ed.resultado.src}" download="primoris-ia.${ed.resultado.ext}">${ic('download', 16)} Baixar imagem</a><button class="btn" data-bib="gerar" ${ed.loading ? 'disabled' : ''}>Gerar outra versão</button></div></div>` : ''}
-</section><p class="muted small">Use fotos suas ou de pessoas que autorizaram. As imagens vão para a IA do Google (Gemini) só para gerar o resultado e não ficam salvas na Primoris.</p>`;
+  ${ed.pronto ? `<div class="bib-gemini">
+    <h4>Agora faça no Gemini, em 4 passos:</h4>
+    <ol class="bib-passos">
+      <li><a class="btn sm accent" href="https://gemini.google.com/app" target="_blank" rel="noopener">${ic('arrow', 15)} Abrir o Gemini</a> <span class="muted small">Abre numa nova aba. Entre com sua conta Google se pedir.</span></li>
+      <li><button class="btn sm" data-bib="copiar-img" data-id="ref">${ic('copy', 15)} Copiar a referência</button> e cole no Gemini (<strong>Ctrl+V</strong>).</li>
+      <li><button class="btn sm" data-bib="copiar-img" data-id="eu">${ic('copy', 15)} Copiar a sua foto</button> e cole no Gemini também (<strong>Ctrl+V</strong>).</li>
+      <li><button class="btn sm" data-bib="copiar-prompt">${ic('copy', 15)} Copiar as instruções</button>, cole no Gemini e aperte <strong>Enviar</strong>. Quando a imagem aparecer, clique nela para baixar.</li>
+    </ol>
+    <p class="muted small">No celular, se o copiar não funcionar: <button class="linkbtn" data-bib="baixar-imgs">baixe as duas imagens</button> e anexe no Gemini pelo botão <strong>+</strong>.</p>
+    <details><summary class="small">Ver as instruções que vão para o Gemini</summary><pre class="bib-prompt">${esc(promptFinal())}</pre></details>
+  </div>` : ''}
+</section><p class="muted small">Use fotos suas ou de pessoas que autorizaram. Se usar o post de outra pessoa ou marca como referência, troque nome, valores e logotipo pelos seus antes de publicar. As imagens não ficam salvas na Primoris.</p>`;
 
 export const biblioteca = () => {
   const tab = ['instagram', 'extrator', 'editor'].includes(S.sub.bTab) ? S.sub.bTab : 'inicio';
@@ -395,6 +414,18 @@ async function definirImagem(chave, file) {
   rerender();
 }
 
+async function copiarImagem(chave) {
+  const img = ed[chave]; if (!img) return;
+  try {
+    const png = await new Promise((ok, falha) => { const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); c.toBlob(b => b ? ok(b) : falha(new Error('x')), 'image/png'); }; im.onerror = falha; im.src = img.dataUrl; });
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    avisar(chave === 'ref' ? 'Referência copiada. Cole no Gemini com Ctrl+V.' : 'Sua foto foi copiada. Cole no Gemini com Ctrl+V.', 'ok');
+  } catch { baixarImagem(chave); avisar('Seu navegador não deixou copiar a imagem; baixei o arquivo para você anexar no Gemini.', 'warn'); }
+}
+function baixarImagem(chave) {
+  const img = ed[chave]; if (!img) return;
+  const a = document.createElement('a'); a.href = img.dataUrl; a.download = chave === 'ref' ? '1-referencia.jpg' : '2-minha-foto.jpg'; a.click();
+}
 async function gerar() {
   if (ed.loading) return;
   if (!ed.ref) { ed.erro = 'Envie a imagem de referência (1).'; return rerender(); }
@@ -427,6 +458,14 @@ document.addEventListener('click', e => {
   if (el.dataset.bib === 'tab') { S.sub.bTab = id; S.animNext = true; rerender(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   else if (el.dataset.bib === 'limpar') { ed[id] = null; rerender(); }
   else if (el.dataset.bib === 'gerar') gerar();
+  else if (el.dataset.bib === 'preparar') {
+    if (!ed.ref) { ed.erro = 'Envie a imagem de referência (1).'; ed.pronto = false; return rerender(); }
+    if (!ed.eu) { ed.erro = 'Envie a sua foto (2).'; ed.pronto = false; return rerender(); }
+    ed.erro = ''; ed.pronto = true; rerender(); setTimeout(() => document.querySelector('.bib-gemini')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  }
+  else if (el.dataset.bib === 'copiar-img') copiarImagem(id);
+  else if (el.dataset.bib === 'copiar-prompt') copiar(promptFinal(), 'Instruções copiadas. Cole no Gemini com Ctrl+V e envie.');
+  else if (el.dataset.bib === 'baixar-imgs') { baixarImagem('ref'); setTimeout(() => baixarImagem('eu'), 400); }
   else if (el.dataset.bib === 'email') buscarEmail(Number(id));
   else if (el.dataset.bib === 'copiar') { const e = ex.lista[Number(id)]; if (e) copiar(e.telefone, `Número copiado: ${e.telefone}`); }
   else if (el.dataset.bib === 'copiar-cel') { const l = ex.lista.filter(e => e.tipo === 'celular'); copiar(l.map(e => `${e.nome}\t${e.telefone}`).join('\n'), `${l.length} celulares copiados. Cole na planilha ou no bloco de notas.`); }
