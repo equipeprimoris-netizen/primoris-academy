@@ -785,3 +785,35 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .bib-gemini .bib-passos li { align-items: center; flex-wrap: wrap; gap: 8px; }
 .bib-prompt { white-space: pre-wrap; font-size: 12.5px; background: rgba(0,0,0,.35); padding: 12px; border-radius: 10px; color: #ddd; margin-top: 8px; }
 .bib-alt { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); }
+
+/* ---------- Criador de Artes */
+.arte-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 22px; align-items: start; }
+.arte-esq { display: grid; gap: 12px; min-width: 0; }
+.arte-dir { position: sticky; top: 14px; display: grid; gap: 10px; }
+.arte-palco { background: repeating-conic-gradient(#1a1a1d 0 25%, #121214 0 50%) 0 0 / 22px 22px; border-radius: 14px; padding: 10px; display: grid; place-items: center; border: 1px solid var(--line, rgba(255,255,255,.08)); }
+#arte-cv { width: 100%; max-width: 520px; max-height: 78vh; object-fit: contain; height: auto; border-radius: 8px; touch-action: none; cursor: grab; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+#arte-cv:active { cursor: grabbing; }
+.arte-linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.arte-linha .grow { flex: 1 1 200px; }
+.arte-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.arte-full { grid-column: 1 / -1; }
+.arte-h { margin: 6px 0 0; font-size: 15px; }
+.arte-foto { display: flex; gap: 14px; align-items: center; padding: 12px; border: 2px dashed rgba(34,230,90,.5); border-radius: 14px; background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s; }
+.arte-foto:hover { border-color: #22e65a; background: rgba(34,230,90,.06); }
+.arte-foto.has { border-style: solid; }
+.arte-foto > span:first-child, .arte-foto img { width: 64px; height: 64px; border-radius: 12px; display: grid; place-items: center; background: #0d1f14; object-fit: contain; flex: none; color: #78ff96; }
+.arte-foto-t { display: grid; gap: 2px; }
+.arte-prog { color: #78ff96; font-weight: 600; }
+.arte-chk { display: flex; gap: 8px; align-items: center; font-size: 13px; cursor: pointer; }
+.arte-sel { display: grid; gap: 10px; padding: 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid rgba(255,216,77,.25); }
+.arte-sel-t { display: flex; align-items: center; gap: 8px; }
+.arte-faixa input[type=range] { width: 100%; accent-color: #22e65a; }
+.arte-faixa b { color: #ffd84d; font-weight: 700; }
+.arte-cor input[type=color] { width: 54px; height: 38px; padding: 2px; border-radius: 8px; border: 1px solid rgba(255,255,255,.15); background: transparent; cursor: pointer; }
+.arte-clonar { border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 10px 14px; }
+.arte-clonar summary { cursor: pointer; }
+.arte-clonar[open] { display: grid; gap: 10px; }
+.arte-clonar label.btn { cursor: pointer; }
+.arte-acoes .btn.accent { flex: 1; justify-content: center; }
+@media (max-width: 900px) { .arte-grid { grid-template-columns: 1fr; } .arte-dir { position: static; order: -1; } }
+@media (max-width: 520px) { .arte-campos { grid-template-columns: 1fr; } }

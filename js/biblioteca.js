@@ -1,7 +1,8 @@
 // Primoris Academy — Biblioteca Primoris: Downloader do Instagram, Extrator de Empresas e Editor de Imagem com IA.
-import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=28';
-import { ic, pageHead } from './views.js?v=28';
-import * as P from './platform.js?v=28';
+import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=29';
+import { ic, pageHead } from './views.js?v=29';
+import * as P from './platform.js?v=29';
+import * as A from './arte.js?v=29';
 
 const FN = name => `https://wgwhgcnbkwwrzaovsmij.supabase.co/functions/v1/${name}`;
 const EXTENSAO = 'downloads/primoris-extrator.zip?v=1';
@@ -19,6 +20,7 @@ const bi = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0
 const FERRAMENTAS = [
   { id: 'instagram', nome: 'Downloader do Instagram', tag: 'Instagram', icone: bi('insta', 24), texto: 'Cole o link de um reel, post ou vídeo e baixe em alta qualidade, sem marca d\'água.' },
   { id: 'extrator', nome: 'Extrator de Empresas', tag: 'Prospecção', icone: bi('mapa', 24), texto: 'Pesquise empresas por nicho e cidade aqui mesmo: telefone, celular, site e e-mail, prontos para copiar ou chamar no WhatsApp.' },
+  { id: 'artes', nome: 'Criador de Artes', tag: 'Grátis · rosto 100% fiel', icone: bi('imagem', 24), texto: 'Monte o post de resultado do mês com a sua foto original: o fundo sai sozinho e você só preenche mês, valor e nome. Dá para clonar modelos da internet.' },
   { id: 'editor', nome: 'Editor de Imagem com IA', tag: 'Inteligência Artificial', icone: bi('magia', 24), texto: 'Envie uma imagem de referência e sua foto: o sistema prepara tudo e a IA do Gemini recria a cena com você no lugar. Grátis.' },
 ];
 
@@ -31,7 +33,7 @@ let rerender = () => {};
 let avisar = () => {};
 let novoContato = () => {};
 let prospectar = async () => {};
-export function ligar(fnRender, fnToast, fnContato, fnProspectar) { rerender = fnRender; avisar = fnToast; if (fnContato) novoContato = fnContato; if (fnProspectar) prospectar = fnProspectar; }
+export function ligar(fnRender, fnToast, fnContato, fnProspectar) { rerender = fnRender; avisar = fnToast; A.ligar(fnRender, fnToast); if (fnContato) novoContato = fnContato; if (fnProspectar) prospectar = fnProspectar; }
 
 // ---------- Telas
 const voltar = () => `<button class="linkbtn" data-bib="tab" data-id="inicio">${ic('back', 16)} Voltar para a Biblioteca</button>`;
@@ -111,7 +113,7 @@ Preserve exatamente o meu rosto, traços, tom de pele e formato do rosto: eu pre
 Mantenha da referência: pose, ângulo da câmera, roupa, acessórios, cenário, luz, paleta de cores, textura e proporção da imagem.
 Resultado fotorrealista (ou no mesmo estilo artístico da referência, se ela não for foto).`;
 const promptFinal = () => PROMPT_BASE + (ed.instr.trim() ? `\nAjustes que eu quero: ${ed.instr.trim()}` : '');
-const editor = () => voltar() + `<section class="card bib-panel">${cabecalho(FERRAMENTAS[2])}
+const editor = () => voltar() + `<section class="card bib-panel">${cabecalho(FERRAMENTAS[3])}
   <p class="bib-gratis">${ic('check', 15)} <span><strong>Grátis:</strong> o sistema prepara as imagens e as instruções, e a imagem é gerada no app do <strong>Gemini</strong> (Google), que tem cota gratuita diária. Basta estar logado com uma conta Google.</span></p>
   <div class="bib-duas">
     ${caixa('ref', 1, 'Referência', 'A cena, pose e estilo que você quer copiar.', 'imagem')}
@@ -134,10 +136,10 @@ const editor = () => voltar() + `<section class="card bib-panel">${cabecalho(FER
 </section><p class="muted small">Use fotos suas ou de pessoas que autorizaram. Se usar o post de outra pessoa ou marca como referência, troque nome, valores e logotipo pelos seus antes de publicar. As imagens não ficam salvas na Primoris.</p>`;
 
 export const biblioteca = () => {
-  const tab = ['instagram', 'extrator', 'editor'].includes(S.sub.bTab) ? S.sub.bTab : 'inicio';
-  const corpo = { inicio, instagram, extrator, editor }[tab]();
+  const tab = ['instagram', 'extrator', 'artes', 'editor'].includes(S.sub.bTab) ? S.sub.bTab : 'inicio';
+  const corpo = { inicio, instagram, extrator, artes: () => voltar() + A.tela(), editor }[tab]();
   return pageHead(`<span class="bib-t">${ic('book', 30)}</span> Biblioteca Primoris`, 'O acervo exclusivo da Primoris: materiais, ferramentas e conteúdos para acelerar seus resultados.')
-    + `<div class="hub-tabs" role="tablist">${[['inicio', 'Todas', 'book'], ...FERRAMENTAS.map(f => [f.id, f.nome])].map(([id, l, i]) => `<button role="tab" aria-selected="${tab === id}" class="${tab === id ? 'on' : ''}" data-bib="tab" data-id="${id}">${i ? ic(i, 17) : bi({ instagram: 'insta', extrator: 'mapa', editor: 'magia' }[id], 17)}<span>${esc(l)}</span></button>`).join('')}</div>`
+    + `<div class="hub-tabs" role="tablist">${[['inicio', 'Todas', 'book'], ...FERRAMENTAS.map(f => [f.id, f.nome])].map(([id, l, i]) => `<button role="tab" aria-selected="${tab === id}" class="${tab === id ? 'on' : ''}" data-bib="tab" data-id="${id}">${i ? ic(i, 17) : bi({ instagram: 'insta', extrator: 'mapa', artes: 'imagem', editor: 'magia' }[id], 17)}<span>${esc(l)}</span></button>`).join('')}</div>`
     + `<div class="bib-body">${corpo}</div>`;
 };
 

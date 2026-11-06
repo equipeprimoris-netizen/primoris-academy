@@ -1,10 +1,10 @@
 // Primoris Academy — inicialização, sincronização com o banco, eventos e ações.
-import * as C from './core.js?v=28';
-import * as V from './views.js?v=28';
-import * as P from './platform.js?v=28';
-import * as V2 from './views2.js?v=28';
-import * as V3 from './views3.js?v=28';
-import * as B from './biblioteca.js?v=28';
+import * as C from './core.js?v=29';
+import * as V from './views.js?v=29';
+import * as P from './platform.js?v=29';
+import * as V2 from './views2.js?v=29';
+import * as V3 from './views3.js?v=29';
+import * as B from './biblioteca.js?v=29';
 const { S, esc, list, nowISO, today, dayOf, addDays, put, upd, del, add, merge, audit, notify, normPhone, parseMoney, me, role, isAdmin, isGestor, nome, prog } = C;
 
 const $app = document.getElementById('app');
@@ -144,6 +144,7 @@ function startData() {
   track('d:validacoes', db.collection('validacoes'), s => { S.validacoes = toMap(s); });
   track('d:forum', db.collection('forum'), s => { S.forum = toMap(s); });
   track('d:eventos', db.collection('eventos'), s => { S.eventos = toMap(s); });
+  track('d:modelos_arte', db.collection('modelos_arte'), s => { S.modelos_arte = toMap(s); });
   track('d:inscricoes', mine ? db.collection('inscricoes').where('ownerId', '==', uid) : db.collection('inscricoes'), s => { S.inscricoes = toMap(s); });
   track('d:forum_resp', db.collection('forum_resp'), s => { S.forum_resp = toMap(s); });
   track('d:cursos', db.collection('cursos'), s => { S.cursos = toMap(s); });

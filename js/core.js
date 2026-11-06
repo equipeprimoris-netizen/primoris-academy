@@ -6,7 +6,7 @@ export const S = {
   profile: null, ready: false, fatal: null, membersLoaded: false, started: false,
   members: {}, equipes: {}, cursos: {}, contatos: {}, atividades: {}, reunioes: {},
   vendas: {}, validacoes: {}, tarefas: {}, progresso: {}, feedbacks: {}, notifs: {},
-  solicitacoes: {}, progressoes: {}, audit: {}, pagamentos: {}, forum: {}, forum_resp: {}, eventos: {}, inscricoes: {},
+  solicitacoes: {}, progressoes: {}, audit: {}, pagamentos: {}, forum: {}, forum_resp: {}, eventos: {}, inscricoes: {}, modelos_arte: {},
   config: { geral: null, semanaZero: null, carreira: null, academy: null, comissoes: null, desafios: null, mensagens: null },
   view: 'inicio', sub: {}, dash: { escopo: 'me', periodo: 'mes', equipe: '', consultor: '' },
   stale: false, digitando: {},
