@@ -1,7 +1,7 @@
 // Primoris Academy — Biblioteca Primoris: Downloader do Instagram, Extrator de Empresas e Editor de Imagem com IA.
-import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=27';
-import { ic, pageHead } from './views.js?v=27';
-import * as P from './platform.js?v=27';
+import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=28';
+import { ic, pageHead } from './views.js?v=28';
+import * as P from './platform.js?v=28';
 
 const FN = name => `https://wgwhgcnbkwwrzaovsmij.supabase.co/functions/v1/${name}`;
 const EXTENSAO = 'downloads/primoris-extrator.zip?v=1';
@@ -19,7 +19,7 @@ const bi = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0
 const FERRAMENTAS = [
   { id: 'instagram', nome: 'Downloader do Instagram', tag: 'Instagram', icone: bi('insta', 24), texto: 'Cole o link de um reel, post ou vídeo e baixe em alta qualidade, sem marca d\'água.' },
   { id: 'extrator', nome: 'Extrator de Empresas', tag: 'Prospecção', icone: bi('mapa', 24), texto: 'Pesquise empresas por nicho e cidade aqui mesmo: telefone, celular, site e e-mail, prontos para copiar ou chamar no WhatsApp.' },
-  { id: 'editor', nome: 'Editor de Imagem com IA', tag: 'Inteligência Artificial', icone: bi('magia', 24), texto: 'Envie uma imagem de referência e sua foto: a IA recria a cena com você no lugar, aqui mesmo. Grátis.' },
+  { id: 'editor', nome: 'Editor de Imagem com IA', tag: 'Inteligência Artificial', icone: bi('magia', 24), texto: 'Envie uma imagem de referência e sua foto: o sistema prepara tudo e a IA do Gemini recria a cena com você no lugar. Grátis.' },
 ];
 
 // Estado local (fica guardado enquanto o app estiver aberto)
@@ -112,16 +112,14 @@ Mantenha da referência: pose, ângulo da câmera, roupa, acessórios, cenário,
 Resultado fotorrealista (ou no mesmo estilo artístico da referência, se ela não for foto).`;
 const promptFinal = () => PROMPT_BASE + (ed.instr.trim() ? `\nAjustes que eu quero: ${ed.instr.trim()}` : '');
 const editor = () => voltar() + `<section class="card bib-panel">${cabecalho(FERRAMENTAS[2])}
-  <p class="bib-gratis">${ic('check', 15)} <span><strong>Grátis:</strong> a imagem é gerada aqui mesmo pela IA de imagem do Google (Nano Banana), usando uma conta gratuita do <strong>Puter</strong>. Na primeira vez, o sistema pede para você entrar ou criar a conta (pode usar o Google). Se a cota grátis acabar, use o caminho pelo app do Gemini, logo abaixo.</span></p>
+  <p class="bib-gratis">${ic('check', 15)} <span><strong>Grátis:</strong> o sistema prepara as imagens e as instruções, e a imagem é gerada no app do <strong>Gemini</strong> (Google), que tem cota gratuita diária. Basta estar logado com uma conta Google.</span></p>
   <div class="bib-duas">
     ${caixa('ref', 1, 'Referência', 'A cena, pose e estilo que você quer copiar.', 'imagem')}
     ${caixa('eu', 2, 'Sua foto', 'De preferência com o rosto bem visível e boa luz.', 'selfie')}
   </div>
   <label class="field"><span>Ajustes (opcional)</span><textarea data-bib-input="edInstr" rows="2" maxlength="800" placeholder="Ex.: trocar as cores para preto, verde e branco; colocar meu nome no lugar do nome da referência; formato quadrado">${esc(ed.instr)}</textarea></label>
-  <div class="bib-row"><button class="btn accent" data-bib="gerar-puter" ${ed.loading ? 'disabled' : ''}>${ed.loading ? '<span class="bib-spin"></span> Gerando com IA…' : `${bi('magia', 16)} Gerar imagem aqui`}</button><span class="muted small">${ed.loading ? 'Pode levar até 1 minuto. Não feche esta tela.' : 'Leva de 20 a 60 segundos.'}</span></div>
+  <div class="bib-row"><button class="btn accent" data-bib="preparar">${bi('magia', 16)} Preparar para o Gemini</button><span class="muted small">Leva 1 minuto: copiar, colar e enviar.</span></div>
   ${ed.erro ? `<p class="bib-msg bad">${esc(ed.erro)}</p>` : ''}
-  ${ed.resultado ? `<div class="bib-result"><img src="${ed.resultado.src}" alt="Resultado"><div class="bib-row bib-c"><button class="btn accent" data-bib="baixar-res">${ic('download', 16)} Baixar imagem</button><button class="btn" data-bib="gerar-puter" ${ed.loading ? 'disabled' : ''}>Gerar outra versão</button></div></div>` : ''}
-  <div class="bib-row bib-alt"><span class="muted small">Sem cota no Puter ou preferiu o app do Google?</span><button class="btn sm" data-bib="preparar">${bi('magia', 14)} Fazer pelo app do Gemini (grátis)</button></div>
   ${ed.pronto ? `<div class="bib-gemini">
     <h4>Agora faça no Gemini, em 4 passos:</h4>
     <ol class="bib-passos">
