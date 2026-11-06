@@ -1,7 +1,7 @@
 // Primoris Academy — Biblioteca Primoris: Downloader do Instagram, Extrator de Empresas e Editor de Imagem com IA.
-import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=26';
-import { ic, pageHead } from './views.js?v=26';
-import * as P from './platform.js?v=26';
+import { S, esc, findDuplicate, normPhone, fmtPhone, fmtDate, list, firstName, nome, ETAPAS } from './core.js?v=27';
+import { ic, pageHead } from './views.js?v=27';
+import * as P from './platform.js?v=27';
 
 const FN = name => `https://wgwhgcnbkwwrzaovsmij.supabase.co/functions/v1/${name}`;
 const EXTENSAO = 'downloads/primoris-extrator.zip?v=1';
@@ -19,7 +19,7 @@ const bi = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" viewBox="0
 const FERRAMENTAS = [
   { id: 'instagram', nome: 'Downloader do Instagram', tag: 'Instagram', icone: bi('insta', 24), texto: 'Cole o link de um reel, post ou vídeo e baixe em alta qualidade, sem marca d\'água.' },
   { id: 'extrator', nome: 'Extrator de Empresas', tag: 'Prospecção', icone: bi('mapa', 24), texto: 'Pesquise empresas por nicho e cidade aqui mesmo: telefone, celular, site e e-mail, prontos para copiar ou chamar no WhatsApp.' },
-  { id: 'editor', nome: 'Editor de Imagem com IA', tag: 'Inteligência Artificial', icone: bi('magia', 24), texto: 'Envie uma imagem de referência e sua foto: a IA do Gemini recria a cena com você no lugar. Grátis.' },
+  { id: 'editor', nome: 'Editor de Imagem com IA', tag: 'Inteligência Artificial', icone: bi('magia', 24), texto: 'Envie uma imagem de referência e sua foto: a IA recria a cena com você no lugar, aqui mesmo. Grátis.' },
 ];
 
 // Estado local (fica guardado enquanto o app estiver aberto)
@@ -112,14 +112,16 @@ Mantenha da referência: pose, ângulo da câmera, roupa, acessórios, cenário,
 Resultado fotorrealista (ou no mesmo estilo artístico da referência, se ela não for foto).`;
 const promptFinal = () => PROMPT_BASE + (ed.instr.trim() ? `\nAjustes que eu quero: ${ed.instr.trim()}` : '');
 const editor = () => voltar() + `<section class="card bib-panel">${cabecalho(FERRAMENTAS[2])}
-  <p class="bib-gratis">${ic('check', 15)} <span><strong>Grátis:</strong> o sistema prepara as imagens e as instruções, e a imagem é gerada no app do <strong>Gemini</strong> (Google), que tem cota gratuita diária. Basta estar logado com uma conta Google.</span></p>
+  <p class="bib-gratis">${ic('check', 15)} <span><strong>Grátis:</strong> a imagem é gerada aqui mesmo pela IA de imagem do Google (Nano Banana), usando uma conta gratuita do <strong>Puter</strong>. Na primeira vez, o sistema pede para você entrar ou criar a conta (pode usar o Google). Se a cota grátis acabar, use o caminho pelo app do Gemini, logo abaixo.</span></p>
   <div class="bib-duas">
     ${caixa('ref', 1, 'Referência', 'A cena, pose e estilo que você quer copiar.', 'imagem')}
     ${caixa('eu', 2, 'Sua foto', 'De preferência com o rosto bem visível e boa luz.', 'selfie')}
   </div>
   <label class="field"><span>Ajustes (opcional)</span><textarea data-bib-input="edInstr" rows="2" maxlength="800" placeholder="Ex.: trocar as cores para preto, verde e branco; colocar meu nome no lugar do nome da referência; formato quadrado">${esc(ed.instr)}</textarea></label>
-  <div class="bib-row"><button class="btn accent" data-bib="preparar">${bi('magia', 16)} Preparar para o Gemini</button><span class="muted small">Leva 1 minuto: copiar, colar e enviar.</span></div>
+  <div class="bib-row"><button class="btn accent" data-bib="gerar-puter" ${ed.loading ? 'disabled' : ''}>${ed.loading ? '<span class="bib-spin"></span> Gerando com IA…' : `${bi('magia', 16)} Gerar imagem aqui`}</button><span class="muted small">${ed.loading ? 'Pode levar até 1 minuto. Não feche esta tela.' : 'Leva de 20 a 60 segundos.'}</span></div>
   ${ed.erro ? `<p class="bib-msg bad">${esc(ed.erro)}</p>` : ''}
+  ${ed.resultado ? `<div class="bib-result"><img src="${ed.resultado.src}" alt="Resultado"><div class="bib-row bib-c"><button class="btn accent" data-bib="baixar-res">${ic('download', 16)} Baixar imagem</button><button class="btn" data-bib="gerar-puter" ${ed.loading ? 'disabled' : ''}>Gerar outra versão</button></div></div>` : ''}
+  <div class="bib-row bib-alt"><span class="muted small">Sem cota no Puter ou preferiu o app do Google?</span><button class="btn sm" data-bib="preparar">${bi('magia', 14)} Fazer pelo app do Gemini (grátis)</button></div>
   ${ed.pronto ? `<div class="bib-gemini">
     <h4>Agora faça no Gemini, em 4 passos:</h4>
     <ol class="bib-passos">
@@ -414,6 +416,39 @@ async function definirImagem(chave, file) {
   rerender();
 }
 
+// ---------- Geração grátis dentro do sistema pelo Puter (cada usuário usa a própria conta gratuita)
+let puterPronto = null;
+function carregarPuter() {
+  if (window.puter) return Promise.resolve(window.puter);
+  if (!puterPronto) puterPronto = new Promise((ok, falha) => { const sc = document.createElement('script'); sc.src = 'https://js.puter.com/v2/'; sc.async = true; sc.onload = () => ok(window.puter); sc.onerror = () => { puterPronto = null; falha(new Error('Não consegui carregar a IA gratuita. Verifique sua internet.')); }; document.head.appendChild(sc); });
+  return puterPronto;
+}
+async function gerarPuter() {
+  if (ed.loading) return;
+  if (!ed.ref) { ed.erro = 'Envie a imagem de referência (1).'; return rerender(); }
+  if (!ed.eu) { ed.erro = 'Envie a sua foto (2).'; return rerender(); }
+  Object.assign(ed, { loading: true, erro: '' }); rerender();
+  try {
+    const puter = await carregarPuter();
+    if (!puter.auth.isSignedIn()) { avisar('Entre ou crie sua conta gratuita do Puter na janela que abriu.', 'ok'); await puter.auth.signIn(); }
+    const img = await puter.ai.txt2img(promptFinal(), { model: 'gemini-3.1-flash-image', quality: '1K', input_images: [ed.ref.dataUrl, ed.eu.dataUrl] });
+    const src = img?.src || String(img || '');
+    if (!src) throw new Error('A IA não devolveu imagem. Tente de novo.');
+    ed.resultado = { src, ext: /png/.test(src.slice(0, 30)) ? 'png' : 'jpg' }; avisar('Imagem pronta!', 'ok');
+    setTimeout(() => document.querySelector('.bib-result')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+  } catch (e) {
+    const cod = e?.errorCode || e?.code || e?.error?.code || '', msg = e?.message || e?.error?.message || '';
+    ed.erro = /insufficient_funds|402|credit|funds/i.test(cod + msg) ? 'A cota grátis da sua conta Puter acabou por agora. Use o botão "Fazer pelo app do Gemini (grátis)" abaixo.'
+      : /moderation/i.test(cod + msg) ? 'A IA recusou essas imagens ou instruções. Tente outra referência ou mude os ajustes.'
+      : /popup|closed|cancel|auth/i.test(cod + msg) ? 'O login no Puter não foi concluído. Clique em "Gerar imagem aqui" e entre na janela que abrir (permita pop-ups).'
+      : 'Não foi possível gerar agora' + (msg ? ': ' + msg : '.') + ' Tente de novo ou use o app do Gemini.';
+  } finally { ed.loading = false; rerender(); }
+}
+async function baixarResultado() {
+  const r = ed.resultado; if (!r) return;
+  try { const b = await (await fetch(r.src)).blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'primoris-ia.' + (b.type.includes('png') ? 'png' : 'jpg'); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+  catch { window.open(r.src, '_blank'); }
+}
 async function copiarImagem(chave) {
   const img = ed[chave]; if (!img) return;
   try {
@@ -458,6 +493,8 @@ document.addEventListener('click', e => {
   if (el.dataset.bib === 'tab') { S.sub.bTab = id; S.animNext = true; rerender(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   else if (el.dataset.bib === 'limpar') { ed[id] = null; rerender(); }
   else if (el.dataset.bib === 'gerar') gerar();
+  else if (el.dataset.bib === 'gerar-puter') gerarPuter();
+  else if (el.dataset.bib === 'baixar-res') baixarResultado();
   else if (el.dataset.bib === 'preparar') {
     if (!ed.ref) { ed.erro = 'Envie a imagem de referência (1).'; ed.pronto = false; return rerender(); }
     if (!ed.eu) { ed.erro = 'Envie a sua foto (2).'; ed.pronto = false; return rerender(); }

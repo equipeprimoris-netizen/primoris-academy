@@ -784,3 +784,4 @@ img.crown { display: block; height: auto; object-fit: contain; }
 .bib-gemini h4 { margin: 0 0 10px; font-size: 16px; }
 .bib-gemini .bib-passos li { align-items: center; flex-wrap: wrap; gap: 8px; }
 .bib-prompt { white-space: pre-wrap; font-size: 12.5px; background: rgba(0,0,0,.35); padding: 12px; border-radius: 10px; color: #ddd; margin-top: 8px; }
+.bib-alt { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); }
